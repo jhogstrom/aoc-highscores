@@ -1,0 +1,4 @@
+flake8
+-r reqs_aws.txt
+-r htmlgen/requirements.txt
+-r parse_globals/requirements.txt

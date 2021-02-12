@@ -1,0 +1,593 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+{% raw %}
+  <script type="text/javascript" src="./scores.template_files/w3.js.download"></script>
+  <style>@media print {#ghostery-tracker-tally {display:none !important}}</style>
+	<script type="text/javascript" src="./scores.template_files/loader.js.download"></script>
+	<script type="text/javascript" src="./scores.template_files/jquery.min.js.download"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./scores.template_files/w3.css">
+{% endraw %}
+	<title>{{leaderboard.title }} {{ leaderboard.year }}</title>
+<script>
+
+google.charts.load('current', {packages: ['corechart', 'line']});
+
+function sortTable(n, divName) {
+  var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+  table = document.getElementById(divName);
+  switching = true;
+  // Set the sorting direction to ascending:
+  dir = "asc";
+  /* Make a loop that will continue until
+  no switching has been done: */
+  while (switching) {
+    // Start by saying: no switching is done:
+    switching = false;
+    rows = table.rows;
+    /* Loop through all table rows (except the
+    first, which contains table headers): */
+    for (i = 1; i < (rows.length - 1); i++) {
+      // Start by saying there should be no switching:
+      shouldSwitch = false;
+      /* Get the two elements you want to compare,
+      one from current row and one from the next: */
+      x = rows[i].getElementsByTagName("TD")[n];
+      y = rows[i + 1].getElementsByTagName("TD")[n];
+      /* Check if the two rows should switch place,
+      based on the direction, asc or desc: */
+	  xValue = Number(x.getAttribute("sort"));
+	  yValue = Number(y.getAttribute("sort"));
+	  if (dir == "asc") {
+        if (xValue > yValue) {
+          // If so, mark as a switch and break the loop:
+          shouldSwitch = true;
+          break;
+        }
+      } else if (dir == "desc") {
+        if (yValue > xValue) {
+          // If so, mark as a switch and break the loop:
+          shouldSwitch = true;
+          break;
+        }
+      }
+    }
+    if (shouldSwitch) {
+      /* If a switch has been marked, make the switch
+      and mark that a switch has been done: */
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+      // Each time a switch is done, increase this count by 1:
+      switchcount ++;
+    } else {
+      /* If no switching has been done AND the direction is "asc",
+      set the direction to "desc" and run the while loop again. */
+      if (switchcount == 0 && dir == "asc") {
+        dir = "desc";
+        switching = true;
+      }
+    }
+  }
+}
+
+window.onload = function restoreTab() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const tab = urlParams.get('tab');
+  if (tab) {
+    const button =  document.getElementById(tab+"_btn");
+    if (button) {
+      openTab(button, tab)
+    }
+  }
+}
+
+function openTab(target, tabName) {
+  var i, x, tablinks;
+  x = document.getElementsByClassName("tab");
+  for (i = 0; i < x.length; i++) {
+      x[i].style.display = "none";
+  }
+  tablinks = document.getElementsByClassName("tablink");
+  for (i = 0; i < x.length; i++) {
+      tablinks[i].className = tablinks[i].className.replace(" w3-red", "");
+  }
+  document.getElementById(tabName).style.display = "block";
+  target.className += " w3-red";
+
+  window.history.pushState({},"", document.location.origin + document.location.pathname + "?tab="+tabName);
+}
+
+{#
+ #
+ # jinja2 macros
+ #
+-#}
+
+{###########################################
+ # playerlist()
+ #  Prints
+ #   data.addColumn('number', <player.name>)
+ # for all ordered_players if totalscore > 0
+ #
+-#}
+{% macro playerlist() %}
+{% for p in leaderboard.ordered_players %}
+{% if p.totalscore > 0 %}
+  data.addColumn('number', '{{ p.name }}'); // {{ p.totalscore }}
+{% else %}
+  // {{ p.name }} has zero points
+{% endif %}
+{% endfor %}
+{% endmacro %}
+
+{###########################################
+ # total_star_cols(offset)
+ #  Prints the number of columns for days and stars plus offset.
+ #  offset must be an integer (typically the number of columns
+ #  before the days start)
+ #
+-#}
+{% macro total_star_cols(offset, columns) %}
+{{ offset + leaderboard.highestday * columns}}
+{%- endmacro -%}
+
+{###########################################
+ # td_class(pos)
+ #  Prints class="gold|silver|bronze|ralign" based on the value of pos
+ #
+-#}
+{%- macro td_class(pos) -%}
+{%- if pos == 1 -%}
+class="gold"
+{%- elif pos == 2 -%}
+class="silver"
+{%- elif pos == 3 -%}
+class="bronze"
+{%- else -%}
+class="ralign"
+{%- endif -%}
+{%- endmacro -%}
+
+{###########################################
+ # table_header(table_id, nr, title)
+ #  Generates the start of a table section, including the table and the first columns
+ # if id != 00 it will not be displayed
+ #
+-#}
+{% macro table_header(table_id, nr, title) %}
+<div id="{{ nr }}-section" class="w3-container w3-border tab"
+{%- if nr != "00" %}
+ style="display:none"
+{%- endif -%}
+>
+<h1>{{ title }}</h1>
+<div style="overflow-x:auto;">
+  <table id="{{ table_id }}"><tbody>
+    <tr>
+      <th onclick="sortTable(0, '{{ table_id }}')" class="sortable_l">{{ title }}</th>
+      <th onclick="sortTable(1, '{{ table_id }}')" class="sortable_r"><span title="Local score">L</span></th>
+      <th onclick="sortTable(2, '{{ table_id }}')" class="sortable_r"><span title="Global score">G</span></th>
+      <th onclick="sortTable(3, '{{ table_id }}')" class="sortable_r"><span title="Stars">S</span></th>
+      <th onclick="sortTable(4, '{{ table_id }}')" class="sortable_r"><span title="Tobii Score, lower is better. Winner for each star gets 0 points ">T</span></th>
+{% endmacro %}
+
+{###########################################
+ # days_with_2_stars(table_id)
+ #  Generates two columns for all days, one per star.
+ #
+-#}
+{% macro days_with_2_stars(table_id) %}
+{% for day in range(1, leaderboard.highestday+1) %}
+{%- for star in range(2) -%}
+      <th onclick="sortTable({{ 5 + (day-1)*2 + star }}, '{{ table_id }}')" class="sortable_r">
+{%- if leaderboard.day_excluded(day) -%}
+        <p style="color:red">
+{%- endif -%}
+          Day {{ day }}<br>{{ "*" * (star + 1) }}
+{%- if leaderboard.day_excluded(day) -%}
+        </p>
+{%- endif -%}
+      </th>
+{%- endfor -%}
+{%- endfor -%}
+{% endmacro %}
+
+{###########################################
+ # days_with_1_stars(table_id)
+ #  Generates one column for all days.
+ #
+-#}
+{% macro days_with_1_stars(table_id) %}
+{% for day in range(1, leaderboard.highestday+1) %}
+      <th onclick="sortTable({{ 5 + (day-1) }}, '{{ table_id }}')" class="sortable_r_c">
+{%- if leaderboard.day_excluded(day) -%}
+        <p style="color:red">
+{%- endif -%}
+          Day {{ day }}<br>{{ "*=&gt;**" }}
+{%- if leaderboard.day_excluded(day) -%}
+        </p>
+{%- endif -%}
+      </th>
+{% endfor %}
+{% endmacro %}
+
+
+{###########################################
+ # init_table(table_id, nr, title)
+ #  Generates the start of a table section, including headers for all columns
+ #
+-#}
+{% macro init_table(table_id, nr, title, columns) %}
+{{ table_header(table_id, nr, title) }}
+{% if columns == 1 %}
+{{ days_with_1_stars(table_id) }}
+{% else %}
+{{ days_with_2_stars(table_id) }}
+{% endif %}
+      <th onclick="sortTable({{ total_star_cols(5, columns) }}, '{{ table_id }}')" class="sortable_l">Player Name</th>
+    </tr>
+{% endmacro %}
+
+
+{###########################################
+ # fixed_columns(p)
+ #  Generates the "default" columns for a player
+ #
+-#}
+{% macro fixed_columns(p) %}
+      <td sort="{{ p.position }}">{{ p.position }}. {{ p.name|htmlescape }}</td>
+      <td sort="{{ p.localscore }}" align="right">{{ p.localscore }}</td>
+      <td sort="{{ p.globalscore }}" align="right">{{ p.globalscore }}</td>
+      <td sort="{{ p.stars }}" align="right">{{ p.stars }}</td>
+      <td sort="{{ p.accumulatedtobiiscoretotal }}" align="right">{{ p.accumulatedtobiiscoretotal }}</td>
+{%- endmacro %}
+
+{% macro hinttext(day) %}
+*1: {{ day[0].timetocomplete|timestr }}&#13;*2: {{ day[1].timetocomplete|timestr }}
+{%- endmacro -%}
+
+{#
+ # Leaderboard/Local score (pos)
+-#}
+{% macro localscore(p, day, star, hint) %}
+{% if p[day][star].position %}
+        <td sort="{{ p[day][star].position }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].position }}</span></td>
+{% else %}
+        <td sort="200" {{ td_class(200) }}><span title="{{ hint }}"></span></td>
+{% endif %}
+{% endmacro %}
+
+{#
+ # Points behind the leader (local score)
+-#}
+{% macro pointsbehind(p, day, star, hint) %}
+        <td sort="{{ p[day][star].accumulatedposition }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ leaderboard.days[day][star].topscore - p[day][star].accumulatedscore }}</span></td>
+{% endmacro %}
+
+{#
+ # Leaderboard/Local score (accumulated score)
+-#}
+{% macro accumulatedscore(p, day, star, hint) %}
+        <td sort="-{{ p[day][star].accumulatedscore }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].accumulatedscore }}</span></td>
+{% endmacro %}
+
+{#
+ # Total time to solve since the problem was published
+-#}
+{% macro timetocomplete(p, day, star, hint) %}
+{% if p[day][star].timetocomplete %}
+{% set sort=p[day][star].timetocomplete %}
+{% else %}
+{% set sort=99999999 %}
+{% endif %}
+        <td sort="{{ sort }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].timetocomplete|timestr }}</span></td>
+{% endmacro %}
+
+{#
+ # Offset from winner
+-#}
+{% macro offsetfromwinner(p, day, star, hint) %}
+        <td sort="{{ p[day][star].offsetfromwinner }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].offsetfromwinner|timestr|winner }}</span></td>
+{% endmacro %}
+
+{#
+ # Leaderboard/TobiiScore (accumulated score)
+-#}
+{% macro tobiiscore(p, day, star, hint) %}
+        <td sort="{{ p[day][star].accumulatedtobiiscore }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].accumulatedtobiiscore }}</span></td>
+{% endmacro %}
+
+{#
+ # Accumulated time to solve
+-#}
+{% macro accumulatedtimetosolve(p, day, star, hint) %}
+        <td sort="{{ p[day][star].accumulatedposition }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].accumulatedtimetocomplete|timestr }}</span></td>
+{% endmacro %}
+
+{#
+ # Leaderboard/Global score (score)
+-#}
+{% macro globalscore(p, day, star, hint) %}
+{% if p[day][star].globalscore > 0 %}
+        <td sort="{{ p[day][star].accumulatedposition }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].globalscore }}</span></td>
+{% else %}
+        <td/>
+{% endif %}
+{% endmacro %}
+
+{#
+ # Daily position
+-#}
+{%- macro dailyposition(p, day, star, hint) -%}
+        <td sort="{{ p[day][star].position }}" {{ td_class(p[day][star].position) }}><span title="{{ hint }}">{{ p[day][star].position }}</span></td>
+{%- endmacro -%}
+
+{#
+ # Time *2
+-#}
+{% macro timeforstar2(p, day, star, hint) %}
+{% if star == 0 %}
+        <td sort="{{ p[day].star2pos }}" {{ td_class(p[day].star2pos) }}><span title="{{ hint }}">{{ p[day].timetocompletestar2|timestr }}</span></td>
+{% endif %}
+{% endmacro %}
+
+
+
+{% macro player_rows(row_generator, columns) %}
+{% for p in leaderboard.ordered_players %}
+    <tr class="item">
+      {{ fixed_columns(p) }}
+{%- for day in range(1, leaderboard.highestday+1) -%}
+{%- for star in range(columns) -%}
+{%- if not leaderboard.day_excluded(day) -%}
+      {{- row_generator(p, day, star, hinttext(p[day])) -}}
+{%- else -%}
+      <td/>
+{%- endif -%}
+{%- endfor -%}
+{%- endfor -%}
+      <td sort="{{ p.name | sortable }}">{{ p.name }}</td>
+    </tr>
+{%- endfor -%}
+{% endmacro %}
+
+{###########################################
+ # exit_table()
+ #  Generates the closing tags for the table/section
+ #
+-#}
+{% macro exit_table() %}
+  </tbody></table>
+</div>
+<h2>GENERATED DATA</h2>
+</div>
+{% endmacro %}
+
+{% macro make_table(nr, title, row_generator, columns) %}
+{{ init_table("t"+nr, nr, title, columns) }}
+{{ player_rows(row_generator, columns) }}
+{{ exit_table() }}
+{% endmacro %}
+
+{% macro data_dailyposition() %}
+{# need empty row here for formatting #}
+
+{% for day in range(1, leaderboard.highestday + 1) -%}
+{%- for star in range(2) %}
+    [{{ ((day-1) * 2 + star + 1) / 2.0 }},
+{%- for p in leaderboard.ordered_players if p.totalscore -%}
+{{ p[day][star].position | add_or_empty(1) | empty_if_true(leaderboard.day_excluded(day)) }},
+{%- endfor -%}
+    ],
+{% endfor %}
+{%- endfor -%}
+{%- endmacro -%}
+
+google.charts.setOnLoadCallback(drawPointsBehindTheLeaderChart);
+function drawPointsBehindTheLeaderChart() {
+  var data = new google.visualization.DataTable();
+  data.addColumn('number', 'X');
+{{ playerlist() }}
+  data.addRows([
+{% for d in leaderboard.scorediffgraph  %}
+    {{ d }},
+{% endfor %}
+  ]);
+  var chartwidth = $('#tabmenu').width();
+  var options = { width: chartwidth, height: 1000, left: 20,top: 20, hAxis: { title: 'day/star' }, explorer: {zoomDelta: 1.1}, vAxis: { logScale: 'True', title: 'Points behind the leader' }};
+  var chart = new google.visualization.LineChart(document.getElementById('chart_PointsBehindTheLeader'));
+  chart.draw(data, options);
+};
+ $(window).resize(function(){drawPointsBehindTheLeaderChart();});
+
+google.charts.setOnLoadCallback(drawAccumulatedPositionChart);
+function drawAccumulatedPositionChart() {
+  var data = new google.visualization.DataTable();
+  data.addColumn('number', 'X');
+{{ playerlist() }}
+  data.addRows([
+{% for d in leaderboard.accumulated_positions %}
+    {{ d }},
+{% endfor %}
+    ]);
+  var chartwidth = $('#tabmenu').width();
+  var options = { width: chartwidth, height: 1000, left: 20,top: 20, hAxis: { title: 'day/star' }, explorer: {zoomDelta: 1.1}, vAxis: { logScale: 'False', title: 'Position' }};
+  var chart = new google.visualization.LineChart(document.getElementById('chart_AccumulatedPosition'));
+  chart.draw(data, options);
+};
+ $(window).resize(function(){drawAccumulatedPositionChart();});
+
+google.charts.setOnLoadCallback(drawDailyPositionChart);
+function drawDailyPositionChart() {
+  var data = new google.visualization.DataTable();
+  data.addColumn('number', 'X');
+{{ playerlist() }}
+  data.addRows([
+    {{ data_dailyposition() }}
+  ]);
+  var chartwidth = $('#tabmenu').width();
+  var options = { width: chartwidth, height: 1000, left: 20,top: 20, hAxis: { title: 'day/star' }, explorer: {zoomDelta: 1.1}, vAxis: { logScale: 'False', title: 'Daily Position' }};
+  var chart = new google.visualization.LineChart(document.getElementById('chart_DailyPosition'));
+  chart.draw(data, options);
+};
+ $(window).resize(function(){drawDailyPositionChart();});
+
+
+</script><script type="text/javascript" charset="UTF-8" src="./scores.template_files/loader.js(1).download"></script>
+<style>
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 8px;
+}
+
+tr:nth-child(even) {background-color: #f2f2f2;}
+th {
+  background-color: #4CAF50;
+  color: white;
+}
+
+th.sortable {
+  cursor:pointer;
+  cursor:hand;
+}
+
+th.sortable_l {
+  cursor:pointer;
+  cursor:hand;
+  text-align:left;
+}
+
+th.sortable_r {
+  cursor:pointer;
+  cursor:hand;
+  text-align:right;
+}
+
+th.sortable_r_c {
+  cursor:pointer;
+  cursor:hand;
+  text-align:center;
+}
+
+td.ralign {
+  text-align:right;
+}
+
+td.gold {
+  background-color: #FFDF00;
+  text-align:right;
+}
+
+td.silver {
+  background-color: #C0C0C0;
+  text-align:right;
+}
+td.bronze {
+  background-color: #BC8A28;
+  text-align:right;
+}
+td.gray {
+  color: #AAAAAA;
+}
+
+.hoverTable{
+	width:100%;
+	border-collapse:collapse;
+}
+
+/* Define the hover highlight color for the table row */
+table tr:hover {
+  background-color: #ffff99;
+}
+
+.chart {
+  width: 100%;
+  min-height: 450px;
+}
+
+.chartrow {
+  margin:0 !important;
+}
+
+p.footer {
+    margin-left: 20px;
+}
+
+</style>
+  <link id="load-css-0" rel="stylesheet" type="text/css" href="./scores.template_files/tooltip.css">
+  <link id="load-css-1" rel="stylesheet" type="text/css" href="./scores.template_files/util.css">
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/jsapi_compiled_default_module.js.download"></script>
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/jsapi_compiled_graphics_module.js.download"></script>
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/jsapi_compiled_ui_module.js.download"></script>
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/jsapi_compiled_corechart_module.js.download"></script>
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/jsapi_compiled_fw_module.js.download"></script>
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/dygraph-tickers-combined.js.download"></script>
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/webfont.js.download"></script>
+  <script type="text/javascript" charset="UTF-8" src="./scores.template_files/jsapi_compiled_line_module.js.download"></script>
+</head>
+<body>
+<div class="w3-container">
+  <div id="tabmenu" class="w3-bar w3-black">
+    <div>
+      Leaderboard for {{ leaderboard.title }} {{ leaderboard.year }}, inactive players removed (<a href="https://lillfiluren.se/tobii/aoc/leaderboard_34481_2020_0.html">add them</a>)
+    </div>
+    <button id="00-Leaderboard (Pos)_btn" class="w3-bar-item w3-button tablink w3-red" onclick="openTab(event.currentTarget,'00-section')">Leaderboard (Pos)</button>
+    <button id="01-Position chart_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'01-Position chart')">Position chart</button>
+    <button id="02-Leaderboard (score)_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'02-section')">Leaderboard (score)</button>
+    <button id="06-Time_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'06-section')">Time</button>
+    <button id="07-Offset_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'07-section')">Offset</button>
+    <button id="08-Accumulated_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'08-section')">Accumulated</button>
+    <button id="09-Time *2_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'09-section')">Time *2</button>
+    <button id="10-ScoreDiff_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'10-section')">ScoreDiff</button>
+    <button id="11-ScoreDiff chart_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'11-ScoreDiff chart')">ScoreDiff chart</button>
+    <button id="20-Global score_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'20-section')">Global score</button>
+    <button id="25-Daily position_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'25-section')">Daily position</button>
+    <button id="44-Daily Position chart_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'44-Daily Position chart')">Daily Position chart</button>
+    <button id="99-TobiiScore_btn" class="w3-bar-item w3-button tablink" onclick="openTab(event.currentTarget,'99-section')">TobiiScore</button>
+    <div align="right">
+    </div>
+  </div>
+
+
+{{ make_table("00", "Leaderboard/Local score (pos)", localscore, 2) }}
+{{ make_table("02", "Leaderboard/Local score (accumulated score)", accumulatedscore, 2) }}
+{{ make_table("06", "Total time to solve since the problem was published", timetocomplete, 2) }}
+{{ make_table("07", "Offset from winner", offsetfromwinner, 2) }}
+{{ make_table("08", "Accumulated time to solve", accumulatedtimetosolve, 2) }}
+{{ make_table("09", "Time *2", timeforstar2, 1) }}
+{{ make_table("10", "Points behind the leader (local score)", pointsbehind, 2) }}
+{{ make_table("20", "Leaderboard/Global score (score)", globalscore, 2) }}
+{{ make_table("25", "Daily position", dailyposition, 2) }}
+{{ make_table("99", "Leaderboard/TobiiScore (accumulated score)", tobiiscore, 2) }}
+
+
+<div id="11-ScoreDiff chart" class="w3-container w3-border tab" style="display:none">
+<div class="chart" id="chart_PointsBehindTheLeader"></div>
+</div>
+<div id="01-Position chart" class="w3-container w3-border tab" style="display:none">
+  <div class="chart" id="chart_AccumulatedPosition"></div>
+</div>
+<div id="44-Daily Position chart" class="w3-container w3-border tab" style="display:none">
+  <div class="chart" id="chart_DailyPosition"></div>
+</div>
+
+<small>
+<p class="footer">
+This page is created/maintained by Jonas Högström, Tobii. During the month of AdventofCode I try to keep it as up to date as possible without putting too much stress on the AoC servers.<br>
+If you find any bugs, have any questions or if you are interested in having these stats for your own private leaderboard, please contact me at jonas.hogstrom@tobii.com.<br>
+
+<!-- timestamps -->
+Generated at {{ leaderboard.today }}<br>
+Data downloaded at 2020-12-31 18:17:28<br><br>
+
+</p>
+
+
+</small></body></html>

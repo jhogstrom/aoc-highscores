@@ -1,0 +1,14 @@
+cache/
+output/
+scores.template_files/
+cdk.out/
+.layers.out/
+bot_token.txt
+
+# config files
+namemap.json
+boards.json
+
+# Tokens for Slack
+slack_bot_token.txt
+slack_verification_token.txt
