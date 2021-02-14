@@ -61,6 +61,8 @@ def get_namemap(boardid: str) -> dict:
 
 def get_global_scores(years: set):
     for year in years:
+        if year in global_scores:
+            continue
         names = set()
         logging.info(f"Getting stored data for {year}")
         response = globalscores_table.query(KeyConditionExpression=Key(COL_ID).eq(int(year)))
@@ -79,9 +81,8 @@ def process_messages(messages):
         logging.warning("No records detected")
         return
 
-    if not global_scores:
-        years = {json.loads(msg['body'])['year'] for msg in messages}
-        get_global_scores(years)
+    years = {json.loads(msg['body'])['year'] for msg in messages}
+    get_global_scores(years)
 
     for msg in messages:
         try:

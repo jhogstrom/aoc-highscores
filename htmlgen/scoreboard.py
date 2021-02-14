@@ -1,7 +1,8 @@
 import datetime
 import logging
 import scores
-import logging
+
+logger = logging.getLogger("aoc")
 
 
 def astime(n: int) -> str:
@@ -20,7 +21,6 @@ def astime(n: int) -> str:
     if d > 0:
         return f"{d:02}.{h:02}:{m:02}:{n:02}"
     return f"{h:02}:{m:02}:{n:02}"
-
 
 
 class BaseObj():
@@ -180,7 +180,7 @@ class LeaderBoard(BaseObj):
         return day == 1
 
     def update_global_scores(self):
-        logging.info("Updating global scores")
+        logger.info("Updating global scores")
         for player in [_ for _ in self.players if _ in self.global_scores['names']]:
             for d in range(1, self.highestday+1):
                 for star in range(2):
@@ -192,11 +192,11 @@ class LeaderBoard(BaseObj):
                         pos = global_stars.index(player.id)
                     if pos:
                         points = 101 - pos
-                        logging.info(f"{player.name} scored {points} points on day {d} (star {star}), year {self.year}")
+                        logger.info(f"{player.name} scored {points} points on day {d} (star {star}), year {self.year}")
                         player[d][star].globalscore = points
 
     def post_process_stats(self) -> None:
-        logging.info("Post processing")
+        logger.info("Post processing")
         if self.excludezero:
             player_count = len([_ for _ in self.players if _.starcount > 0])
         else:
@@ -315,7 +315,7 @@ class ScoreboardRepresentation(scores.DataRepresentation):
         super().__init__()
         self.boardid = boardid
         self.year = year
-        logging.debug(f"ScoreboardRepresentation: {self.filename()} -- {self.url()}")
+        logger.debug(f"ScoreboardRepresentation: {self.filename()} -- {self.url()}")
 
     def filename(self):
         return f"{self.boardid}_{self.year}.json"

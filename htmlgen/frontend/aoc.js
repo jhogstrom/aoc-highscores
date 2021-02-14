@@ -22,6 +22,36 @@ const medal_css = {
     },
 }
 
+function globalResults(datakey, config) {
+  const grid = config[datakey].opts.api;
+
+  const playersWithGlobalScore = []
+  grid.forEachNode(function(node, index) {
+    const data = node.data;
+    for (var i = 0; i < data.length; i++) {
+      let keys = Object.keys(data[i]);
+      for (var j = 5; j < keys.length; j++) {
+        key = keys[j]
+        if (data[i][key] > 0) {
+          console.log(data[i].name);
+          playersWithGlobalScore.push(data[i].name.split(".")[1] + "(" + key + ")");
+        };
+      }
+    }
+  });
+
+  el = document.querySelector("#global_result");
+  if (!el) return;
+  if (playersWithGlobalScore.length == 0)
+  {
+    el.innerHTML = "<br>Maybe tomorrow someone will be in the global top 100... Good luck :)";
+  }
+  else
+  {
+    el.innerHTML = "<br>Congratulations " + playersWithGlobalScore.join() + "!";
+  }
+}
+
 
 function fillData(rows) {
     var data = new google.visualization.DataTable();
@@ -109,7 +139,6 @@ function timedelta_to_string(params) {
     return astime(params.value);
 };
 
-
 function medalPainter(params) {
     var id = params.column.colId;
     id = id.slice(1).split("_");
@@ -162,6 +191,7 @@ function comparator(valueA, valueB, nodeA, nodeB, isInverted) {
 function restoreTab() {
   const urlParams = new URLSearchParams(window.location.search);
   var tab = urlParams.get('tab');
+  console.log("tab", tab)
 
   const buttonId = tab ? tab + "_btn" : "btn_Leaderboard";
   tab = tab || "sectionLeaderboard"
@@ -185,10 +215,10 @@ function openTab(target, tabName, config) {
     button.className = button.className.replace(" w3-red", "");
   }
 
-  // This line doesn't see to do anything
-  window.history.pushState({},
-    "",
-    document.location.origin + document.location.pathname + "?tab=" + tabName);
+  // This line doesn't seem to do anything useful in local state.
+  // window.history.pushState({},
+  //   "",
+  //   document.location.origin + document.location.pathname + "?tab=" + tabName);
 
   // Show requested tab and set red status indicator
   const tab = document.getElementById(tabName);
@@ -196,30 +226,59 @@ function openTab(target, tabName, config) {
   target.className += " w3-red";
   const datatype = target.attributes.datatype ? target.attributes.datatype.value : undefined
   const datakey = target.attributes.datakey ? target.attributes.datakey.value : undefined
-  console.log(datatype)
+  console.log(`${datatype}: ${datakey}`)
 
   if (generated.includes(datakey)) {
     console.log("Using pregenerated widget")
     return;
   };
   generated.push(datakey)
+  const widgetConfig = config[datakey];
 
+  const urlRoot = "https://scoreboard-html.s3.us-east-2.amazonaws.com";
+  const boardId = "34481";
+  const year = "2020";
+  var url;
+  if (widgetConfig.dataname) {
+    url = `${urlRoot}/${boardId}_${year}_${widgetConfig.dataname}.json`;
+    console.log(`${widgetConfig.dataname} -> ${url}`);
+  }
+
+
+
+  var widgetPromise
   if (datatype == "table") {
     g = new agGrid.Grid(
       document.querySelector(`#table${datakey}`),
-      config[datakey].opts);
+      widgetConfig.opts);
+    if (widgetConfig.dataname){
+      console.log("loading data for ", datakey);
+      widgetPromise = fetch(url)
+        .then(response => response.json())
+        .then(data => widgetConfig.opts.api.setRowData(data));
+    }
   } else if (datatype == "chart") {
-    drawChart(
-      `chart${datakey}`,
-      config[datakey].data,
-      config[datakey].opts);
+    if (widgetConfig.dataname) {
+      console.log(`${datakey} <- ${url}`);
+      widgetPromise = fetch(url)
+        .then(response => response.json())
+        .then(data => drawChart(
+          `chart${datakey}`,
+          data,
+          widgetConfig.opts));
+    } else {
+      drawChart(
+        `chart${datakey}`,
+        widgetConfig.data,
+        widgetConfig.opts);
+    }
     return;
   } else {
     console.warn("Unknown type: ", datatype);
   }
-    if (config[datakey].configFunction) {
-      config[datakey].configFunction(datakey, config);
-    }
+  if (widgetConfig.configFunction) {
+    widgetPromise.then(() => widgetConfig.configFunction(datakey, config));
+  }
 };
 
 function createMenu(config) {
@@ -253,9 +312,6 @@ function createMenu(config) {
         `);
       }
     }
-  }
-
-window.onload = function() {
-    createMenu(charts);
-    restoreTab();
 }
+
+

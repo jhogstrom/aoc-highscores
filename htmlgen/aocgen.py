@@ -8,8 +8,7 @@ import sys
 from typing import Dict
 from jsextractor import jsextractor
 
-from scoreboard import LeaderBoard, ScoreboardRepresentation, BaseObj
-from generator import HtmlGenerator
+from scoreboard import LeaderBoard, ScoreboardRepresentation
 from s3cache import S3Cache
 
 cache_bucket_name = os.environ.get("S3_DATACACHE", "scoreboard-datacache")
@@ -59,6 +58,14 @@ def get_scores(year: str, sessionid: str, boardid: str):
     representation = ScoreboardRepresentation(boardid, year)
     return get_data(representation, sessionid)
 
+def generate_data(leaderboard: LeaderBoard, name: str, datafunc) -> None:
+    filekey = f'{leaderboard.boardid}_{leaderboard.year}_{name}.json'
+    logger.debug(f"Uploading {filekey}")
+    html_bucket.put_object(
+        Body=datafunc(),
+        ContentType='application/json',
+        Key=filekey)
+    logger.debug(f"Uploading done")
 
 def generatelist(*,
         sessionid: str,
@@ -84,16 +91,20 @@ def generatelist(*,
     jse.flush("output/tabledata.js")
     logger.debug("Done generating js-data")
 
-    return
+    generate_data(leaderboard, "table-dailyposition", jse.daily_position)
+    generate_data(leaderboard, "table-accumulated_score", jse.accumulated_score)
+    generate_data(leaderboard, "table-time_to_complete", jse.time_to_complete)
+    generate_data(leaderboard, "table-offset_from_winner", jse.offset_from_winner)
+    generate_data(leaderboard, "table-accumulated_solve_time", jse.accumulated_solve_time)
+    generate_data(leaderboard, "table-time_to_second_star", jse.time_to_second_star)
+    generate_data(leaderboard, "table-score_diff", jse.score_diff)
+    generate_data(leaderboard, "table-global_score", jse.global_score)
+    generate_data(leaderboard, "table-tobii_score", jse.tobii_score)
+    generate_data(leaderboard, "table-accumulated_position", jse.accumulated_position)
 
-
-    filekey = f'leaderboard_{leaderboard.boardid}_{leaderboard.year}.html'
-    g = HtmlGenerator(leaderboard)
-    data = g.generate()
-    html_bucket.put_object(
-        Body=data,
-        ContentType='string',
-        Key=filekey)
+    generate_data(leaderboard, "graph-accumulated_position_graph", jse.accumulated_position_graph)
+    generate_data(leaderboard, "graph-scorediff_graph", jse.scorediff_graph)
+    generate_data(leaderboard, "graph-daily_position_graph", jse.daily_position_graph)
 
 
 def get_config(filename):
