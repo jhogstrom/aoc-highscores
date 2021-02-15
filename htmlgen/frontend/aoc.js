@@ -559,18 +559,16 @@ const charts = {
 }
 
 window.onload = function() {
-  const pmedals_best_times = fetch(makeUrl("var-medals_best_time"))
-    .then(response => medals_best_times = response.json());
-
-  const pmedals_star2 = fetch(makeUrl("var-medals_star2"))
-    .then(response => medals_star2 = response.json());
-
-  const pall_players = fetch(makeUrl("var-all_players"))
+  fetch(makeUrl("var-config"))
     .then(response => response.json())
-    .then(data => all_players = data);
-
-    pall_players.then(pmedals_star2).then(pmedals_best_times).then(() => {
-      createMenu(charts);
-      restoreTab();
-    })
+    .then(data => {
+        document.title = data["title"];
+        all_players = data["all_players"];
+        medals_best_times = data["medals_best_time"];
+        medals_star2 = data["medals_star2"];
+      })
+    .then(() => {
+        createMenu(charts);
+        restoreTab();
+      });
 }

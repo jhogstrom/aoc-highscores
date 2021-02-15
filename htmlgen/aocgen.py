@@ -71,7 +71,9 @@ def generate_data_proc(leaderboard: LeaderBoard, name: str, datafunc) -> None:
     logger.debug(f"Uploading done")
 
 def generate_data(leaderboard: LeaderBoard, name: str, datafunc) -> None:
-    process = Thread(target=generate_data_proc, args=[leaderboard, name, datafunc])
+    process = Thread(
+        target=generate_data_proc,
+        args=[leaderboard, name, datafunc])
     process.start()
     threads.append(process)
 
@@ -111,9 +113,7 @@ def generatelist(*,
     generate_data(leaderboard, "graph-scorediff_graph", jse.scorediff_graph)
     generate_data(leaderboard, "graph-daily_position_graph", jse.daily_position_graph)
 
-    generate_data(leaderboard, "var-all_players", jse.all_players)
-    generate_data(leaderboard, "var-medals_best_time", jse.medals_best_time)
-    generate_data(leaderboard, "var-medals_star2", jse.medals_star2)
+    generate_data(leaderboard, "var-config", jse.config)
 
     for process in threads:
         process.join()

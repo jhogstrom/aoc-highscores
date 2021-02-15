@@ -15,26 +15,22 @@ class jsextractor():
         self.board = board
 
 
-    def _make_return_value(self, data, varname: str, *, make_tokens: bool = False) -> str:
+    def _make_return_value(self, data, *, make_tokens: bool = False) -> str:
         """
         Convert the data into a variable or simply return it as a json string
         if no variable name was passed in.
 
         Args:
             data (dict|list): structure with data.
-            varname (str, optional): name of variable to generate. Defaults to None.
             make_tokens (bool, optional): If True, some strings on the data-side will get their quotations removed
             This allows them to be treated as programmatic tokens on the javascript sidebar. Defaults to False.
 
         Returns:
-            str: a json string, possibly as a javascript variable.
+            str: data as a json dump
         """
         s = json.dumps(data, **self.indent)
         if make_tokens:
-            s = self.string_to_tokens(s)
-        if varname:
-            logger.debug(f"Generating js variable for {varname}.")
-            return f"var {varname} = {s};\n\n"
+            return self.string_to_tokens(s)
         return s
 
     def get_padding(self, list_size) -> int:
@@ -44,7 +40,16 @@ class jsextractor():
             return 2
         return 3
 
-    def medals_best_time(self, varname: str = None) -> str:
+    def config(self) -> str:
+        data = {
+            'all_players': [_.name for _ in self.board.ordered_players if _.totalscore > 0],
+            'medals_best_time': self._medals_best_time(),
+            'medals_star2': self._medals_star2(),
+            'title': self.board.title
+        }
+        return self._make_return_value(data)
+
+    def _medals_best_time(self) -> dict:
         data = defaultdict(dict)
         for star in range(2):
             for d in range(1, self.board.highestday+1):
@@ -57,10 +62,9 @@ class jsextractor():
                 for i, res in enumerate(sorted(results)[:3], start=1):
                     for p in results[res]:
                         data[d*2 + star][self.board.ordered_players.index(p)] = i
+        return data
 
-        return self._make_return_value(data, varname)
-
-    def medals_star2(self, varname: str = None) -> str:
+    def _medals_star2(self) -> dict:
         data = defaultdict(dict)
         for d in range(1, self.board.highestday+1):
             results = defaultdict(list)
@@ -71,14 +75,13 @@ class jsextractor():
             for i, res in enumerate(sorted(results)[:3], start=1):
                 for p in results[res]:
                     data[d][self.board.ordered_players.index(p)] = i
+        return data
 
-        return self._make_return_value(data, varname)
-
-    def all_players(self, varname: str = None) -> str:
+    def all_players(self) -> str:
         data = [_.name for _ in self.board.ordered_players if _.totalscore > 0]
-        return self._make_return_value(data, varname)
+        return self._make_return_value(data)
 
-    def scorediff_graph(self, varname: str = None) -> str:
+    def scorediff_graph(self) -> str:
         data = []
         for day in range(1, self.board.highestday+1):
             for star in range(2):
@@ -87,9 +90,9 @@ class jsextractor():
                     playerdata.append(self.board.days[day][star].topscore - p[day][star].accumulatedscore)
                 data.append(playerdata)
 
-        return self._make_return_value(data, varname)
+        return self._make_return_value(data)
 
-    def accumulated_position_graph(self, varname: str = None) -> str:
+    def accumulated_position_graph(self) -> str:
         data = []
         for day in range(1, self.board.highestday+1):
             for star in range(2):
@@ -98,9 +101,9 @@ class jsextractor():
                     playerdata.append(p[day][star].accumulatedposition + 1)
                 data.append(playerdata)
 
-        return self._make_return_value(data, varname)
+        return self._make_return_value(data)
 
-    def daily_position_graph(self, varname: str = None) -> str:
+    def daily_position_graph(self) -> str:
         data = []
         for day in range(1, self.board.highestday+1):
             for star in range(2):
@@ -109,7 +112,7 @@ class jsextractor():
                     playerdata.append(p[day][star].position)
                 data.append(playerdata)
 
-        return self._make_return_value(data, varname)
+        return self._make_return_value(data)
 
     def common_columns(self, pos, p) -> dict:
       pad = self.get_padding(len(self.board.ordered_players))
@@ -131,7 +134,7 @@ class jsextractor():
             {"field": "Tob", "headerTooltip": "Tobii score"},
         ]
 
-    def score_diff(self, varname: str = None) -> str:
+    def score_diff(self) -> str:
       data = []
       for i, p in enumerate(self.board.ordered_players, start=1):
           player_data = self.common_columns(i, p)
@@ -140,9 +143,9 @@ class jsextractor():
                   player_data[f"d{d}_{star}"] = self.board.days[d][star].topscore - p[d][star].accumulatedscore
           data.append(player_data)
 
-      return self._make_return_value(data, varname)
+      return self._make_return_value(data)
 
-    def generate_two_star_data(self, varname: str = None, *, starextractor) -> str:
+    def generate_two_star_data(self, *, starextractor) -> str:
       data = []
       for i, p in enumerate(self.board.ordered_players, start=1):
           player_data = self.common_columns(i, p)
@@ -151,21 +154,21 @@ class jsextractor():
                   player_data[f"d{d}_{star}"] = starextractor(p[d][star])
           data.append(player_data)
 
-      return self._make_return_value(data, varname)
+      return self._make_return_value(data)
 
-    def accumulated_position(self, varname: str = None) -> str:
-      return self.generate_two_star_data(varname, starextractor=lambda star: star.accumulatedposition + 1)
+    def accumulated_position(self) -> str:
+      return self.generate_two_star_data(starextractor=lambda star: star.accumulatedposition + 1)
 
-    def daily_position(self, varname: str = None) -> str:
-        return self.generate_two_star_data(varname, starextractor=lambda star: star.position)
+    def daily_position(self) -> str:
+        return self.generate_two_star_data(starextractor=lambda star: star.position)
 
-    def global_score(self, varname: str = None) -> str:
-        return self.generate_two_star_data(varname, starextractor=lambda star: star.globalscore)
+    def global_score(self) -> str:
+        return self.generate_two_star_data(starextractor=lambda star: star.globalscore)
 
-    def tobii_score(self, varname: str = None) -> str:
-        return self.generate_two_star_data(varname, starextractor=lambda star: star.accumulatedtobiiscore)
+    def tobii_score(self) -> str:
+        return self.generate_two_star_data(starextractor=lambda star: star.accumulatedtobiiscore)
 
-    def coldefs_two_stars(self, varname: str = None) -> str:
+    def coldefs_two_stars(self) -> str:
         data = self.common_coldefs()
         for d in range(1, self.board.highestday+1):
             for star in range(2):
@@ -175,9 +178,9 @@ class jsextractor():
                   "field": f"d{d}_{star}",
                   })
 
-        return self._make_return_value(data, varname)
+        return self._make_return_value(data)
 
-    def coldefs_one_star(self, varname: str = None) -> str:
+    def coldefs_one_star(self) -> str:
         data = self.common_coldefs()
 
         for d in range(1, self.board.highestday+1):
@@ -187,7 +190,7 @@ class jsextractor():
               "field": f"d{d}",
               })
 
-        return self._make_return_value(data, varname)
+        return self._make_return_value(data)
 
     def string_to_tokens(self, s: str) -> str:
         s = re.sub(r'("comparator": )"([a-zA-Z0-9_]*)"', '\\1\\2', s)
@@ -195,7 +198,7 @@ class jsextractor():
         s = re.sub(r'("valueFormatter": )"([a-zA-Z0-9_]*)"', '\\1\\2', s)
         return s
 
-    def default_coldefs_two_stars(self, varname: str = None) -> str:
+    def default_coldefs_two_stars(self) -> str:
         data = {
             "sortable": True,
             "width": 70,
@@ -203,9 +206,9 @@ class jsextractor():
             "cellStyle": "medalPainter",
             "type": 'numericColumn'
         }
-        return self._make_return_value(data, varname, make_tokens=True)
+        return self._make_return_value(data, make_tokens=True)
 
-    def default_coldefs_two_stars_time(self, varname: str = None) -> str:
+    def default_coldefs_two_stars_time(self) -> str:
         data = {
             "sortable": True,
             "width": 120,
@@ -214,9 +217,9 @@ class jsextractor():
             "type": 'numericColumn',
             "valueFormatter": "timedelta_to_string"
         }
-        return self._make_return_value(data, varname, make_tokens=True)
+        return self._make_return_value(data, make_tokens=True)
 
-    def default_coldefs_one_stars_time(self, varname: str = None) -> str:
+    def default_coldefs_one_stars_time(self) -> str:
         data = {
             "sortable": True,
             "width": 120,
@@ -225,12 +228,12 @@ class jsextractor():
             "type": 'numericColumn',
             "valueFormatter": "timedelta_to_string"
         }
-        return self._make_return_value(data, varname, make_tokens=True)
+        return self._make_return_value(data, make_tokens=True)
 
-    def accumulated_score(self, varname: str = None) -> str:
-        return self.generate_two_star_data(varname, starextractor=lambda star: star.accumulatedscore)
+    def accumulated_score(self) -> str:
+        return self.generate_two_star_data(starextractor=lambda star: star.accumulatedscore)
 
-    def time_to_second_star(self, varname: str = None) -> str:
+    def time_to_second_star(self) -> str:
         data = []
         for i, p in enumerate(self.board.ordered_players, start=1):
             player_data = self.common_columns(i, p)
@@ -239,13 +242,13 @@ class jsextractor():
                 player_data[f"d{d}"] = p[d].timetocompletestar2
             data.append(player_data)
 
-        return self._make_return_value(data, varname)
+        return self._make_return_value(data)
 
-    def time_to_complete(self, varname: str = None) -> str:
-        return self.generate_two_star_data(varname, starextractor=lambda star: star.timetocomplete)
+    def time_to_complete(self) -> str:
+        return self.generate_two_star_data(starextractor=lambda star: star.timetocomplete)
 
-    def accumulated_solve_time(self, varname: str = None) -> str:
-        return self.generate_two_star_data(varname, starextractor=lambda star: star.accumulatedtimetocomplete)
+    def accumulated_solve_time(self) -> str:
+        return self.generate_two_star_data(starextractor=lambda star: star.accumulatedtimetocomplete)
 
-    def offset_from_winner(self, varname: str = None) -> str:
-        return self.generate_two_star_data(varname, starextractor=lambda star: star.offsetfromwinner)
+    def offset_from_winner(self) -> str:
+        return self.generate_two_star_data(starextractor=lambda star: star.offsetfromwinner)
