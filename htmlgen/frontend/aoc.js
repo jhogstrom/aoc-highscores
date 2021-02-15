@@ -1,5 +1,6 @@
 google.charts.load('current', {packages: ['corechart', 'line']});
 var generated = []
+var medals_best_times, medals_star2, all_players;
 
 const medal_css = {
     1: {
@@ -22,6 +23,7 @@ const medal_css = {
     },
 }
 
+const urlRoot = "https://scoreboard-html.s3.us-east-2.amazonaws.com";
 const boardId = "34481";
 const year = "2020";
 
@@ -32,6 +34,15 @@ function maxDays() {
     return now.getDate();
   }
   return 25;
+}
+
+function makeUrl(s) {
+  if (!s) {
+    throw Error("Cannot generate Url from empty string-token.")
+  }
+  const url = `${urlRoot}/${boardId}_${year}_${s}.json`;
+  console.log(`${s} -> ${url}`);
+  return url;
 }
 
 function oneStarHeaders() {
@@ -323,16 +334,7 @@ function openTab(target, tabName, config) {
   };
   generated.push(datakey);
   const widgetConfig = config[datakey];
-
-  const urlRoot = "https://scoreboard-html.s3.us-east-2.amazonaws.com";
-  var url;
-  if (widgetConfig.dataname) {
-    url = `${urlRoot}/${boardId}_${year}_${widgetConfig.dataname}.json`;
-    console.log(`${widgetConfig.dataname} -> ${url}`);
-  }
-  else {
-    throw Error("Missing dataname in config-sctructure");
-  }
+  const url = makeUrl(widgetConfig.dataname);
 
   let widgetPromise;
   if (datatype == "table") {
@@ -393,7 +395,20 @@ function createMenu(config) {
     }
 }
 
+
 window.onload = function() {
-  createMenu(charts);
-  restoreTab();
+  const pmedals_best_times = fetch(makeUrl("var-medals_best_time"))
+    .then(response => medals_best_times = response.json());
+
+  const pmedals_star2 = fetch(makeUrl("var-medals_star2"))
+    .then(response => medals_star2 = response.json());
+
+  const pall_players = fetch(makeUrl("var-all_players"))
+    .then(response => response.json())
+    .then(data => all_players = data);
+
+    pall_players.then(pmedals_star2).then(pmedals_best_times).then(() => {
+      createMenu(charts);
+      restoreTab();
+    })
 }

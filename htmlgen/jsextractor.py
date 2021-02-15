@@ -14,44 +14,6 @@ class jsextractor():
         # self.indent = {"indent": 3}
         self.board = board
 
-    def flush(self, filename: str) -> None:
-        """
-        Dump all data into the file as javascript variables.
-
-        Args:
-            filename (str): name of file to write.
-        """
-        with open(filename, "w") as f:
-            # List of names
-            f.write(self.all_players("all_players"))
-
-            # Medals in different orders
-            f.write(self.medals_best_time("medals_best_times"))
-            f.write(self.medals_star2("medals_star2"))
-
-            # Column definitions
-            # f.write(self.coldefs_two_stars("two_star_coldefs"))
-            # f.write(self.coldefs_one_star("one_star_coldefs"))
-            # f.write(self.default_coldefs_two_stars("default_coldefs_two_stars"))
-            # f.write(self.default_coldefs_two_stars_time("default_coldefs_two_stars_time"))
-            # f.write(self.default_coldefs_one_stars_time("default_coldefs_one_stars_time"))
-
-            # # Table data
-            # f.write(self.daily_position("d_daily_position"))
-            # f.write(self.accumulated_score("d_accumulated_score"))
-            # f.write(self.time_to_complete("d_time_to_complete"))
-            # f.write(self.offset_from_winner("d_offset_from_winner"))
-            # f.write(self.time_to_second_star("d_second_star"))
-            # f.write(self.accumulated_solve_time("d_accumulated_solve_time"))
-            # f.write(self.global_score("d_globalscore"))
-            # f.write(self.tobii_score("d_tobiiscore"))
-            # f.write(self.accumulated_position("d_accumulated_position"))
-            # f.write(self.score_diff("d_score_diff"))
-
-            # # Graph data
-            # f.write(self.scorediff_graph("scorediffgraph"))
-            # f.write(self.accumulated_position_graph("accumulated_positions"))
-            # f.write(self.daily_position_graph("daily_position_graph"))
 
     def _make_return_value(self, data, varname: str, *, make_tokens: bool = False) -> str:
         """

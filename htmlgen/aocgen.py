@@ -88,8 +88,6 @@ def generatelist(*,
     logger.debug("Generating js-data")
     logger.info(f"Generated data for {leaderboard.title}-{leaderboard.year}")
     jse = jsextractor(leaderboard)
-    jse.flush("output/tabledata.js")
-    logger.debug("Done generating js-data")
 
     generate_data(leaderboard, "table-dailyposition", jse.daily_position)
     generate_data(leaderboard, "table-accumulated_score", jse.accumulated_score)
@@ -105,6 +103,10 @@ def generatelist(*,
     generate_data(leaderboard, "graph-accumulated_position_graph", jse.accumulated_position_graph)
     generate_data(leaderboard, "graph-scorediff_graph", jse.scorediff_graph)
     generate_data(leaderboard, "graph-daily_position_graph", jse.daily_position_graph)
+
+    generate_data(leaderboard, "var-all_players", jse.all_players)
+    generate_data(leaderboard, "var-medals_best_time", jse.medals_best_time)
+    generate_data(leaderboard, "var-medals_star2", jse.medals_star2)
 
 
 def get_config(filename):
