@@ -5,6 +5,7 @@ import logging
 import os
 import boto3
 import sys
+from threading import Thread
 from typing import Dict
 from jsextractor import jsextractor
 
@@ -58,7 +59,9 @@ def get_scores(year: str, sessionid: str, boardid: str):
     representation = ScoreboardRepresentation(boardid, year)
     return get_data(representation, sessionid)
 
-def generate_data(leaderboard: LeaderBoard, name: str, datafunc) -> None:
+threads = []
+
+def generate_data_proc(leaderboard: LeaderBoard, name: str, datafunc) -> None:
     filekey = f'{leaderboard.boardid}_{leaderboard.year}_{name}.json'
     logger.debug(f"Uploading {filekey}")
     html_bucket.put_object(
@@ -66,6 +69,11 @@ def generate_data(leaderboard: LeaderBoard, name: str, datafunc) -> None:
         ContentType='application/json',
         Key=filekey)
     logger.debug(f"Uploading done")
+
+def generate_data(leaderboard: LeaderBoard, name: str, datafunc) -> None:
+    process = Thread(target=generate_data_proc, args=[leaderboard, name, datafunc])
+    process.start()
+    threads.append(process)
 
 def generatelist(*,
         sessionid: str,
@@ -85,7 +93,6 @@ def generatelist(*,
         global_scores=global_scores)
     # leaderboard.update_global_scores()
     leaderboard.post_process_stats()
-    logger.debug("Generating js-data")
     logger.info(f"Generated data for {leaderboard.title}-{leaderboard.year}")
     jse = jsextractor(leaderboard)
 
@@ -107,6 +114,9 @@ def generatelist(*,
     generate_data(leaderboard, "var-all_players", jse.all_players)
     generate_data(leaderboard, "var-medals_best_time", jse.medals_best_time)
     generate_data(leaderboard, "var-medals_star2", jse.medals_star2)
+
+    for process in threads:
+        process.join()
 
 
 def get_config(filename):
