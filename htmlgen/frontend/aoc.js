@@ -395,6 +395,168 @@ function createMenu(config) {
     }
 }
 
+const charts = {
+  "Leaderboard": {
+    buttonText: "Leaderboard",
+    header: "Leaderboard/Local score (pos)",
+    desc: `Initially sorted by position in the list.
+          The number for each problem show the player's position after completing the problem.
+          Medals are awarded to the fastest players.
+          Blank cells indicate the player did not yet solve that particular challenge.`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars,
+    },
+    dataname: "table-dailyposition"
+  },
+  "PositionChart": {
+    isChart: true,
+    buttonText: "Position Chart",
+    header: "Positions evolving over time",
+    desc: "",
+    opts: {vAxis: { logScale: 'False', title: 'Daily Position' }},
+    dataname: "graph-accumulated_position_graph"
+  },
+  "LeaderboardScore": {
+    buttonText: "Leaderboard (score)",
+    header: "Leaderboard/Local score (accumulated score)",
+    desc: `Initially sorted by position in the list.
+          The number for each problem show the player's total score after completing the problem.
+          Medals are awarded to the fastest players.`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars,
+    },
+    dataname: "table-accumulated_score"
+  },
+  "Time": {
+    buttonText: "Time",
+    header: "Time to complete problem after release",
+    desc: `Initially sorted by position in the list.
+          The time it took for the players to complete the problem after its release.
+          Format is &lt;days&gt;.hours:minutes:seconds.
+          Medals are awarded to the fastest players.`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars_time,
+    },
+    dataname: "table-time_to_complete"
+  },
+  "Offset": {
+    buttonText: "Offset",
+    header: "Offset from winning player",
+    desc: `Initially sorted by position in the list.
+          Table shows how long after the fastest player the rest completed the challenge.
+          Format is &lt;days&gt;.hours:minutes:seconds.
+          Medals are awarded to the fastest players.`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars_time,
+    },
+    dataname: "table-offset_from_winner"
+  },
+  "Accumulatedtime": {
+    buttonText: "Accumulated time",
+    header: "Accumulated time to solve",
+    desc: `Yadayada`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars_time,
+    },
+    dataname: "table-accumulated_solve_time"
+  },
+  "Timestar2": {
+    buttonText: "Time star2",
+    header: "Time to complete second problem",
+    desc: `Initially sorted by position in the list.
+          Table shows how long time it took to solve the second problem efter completing the first.
+          Format is &lt;days&gt;.hours:minutes:seconds.
+          Medals are awarded to the players with the shortest time between star 1 and star 2.`,
+    opts: {
+      columnDefs: one_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_one_stars_time,
+    },
+    dataname: "table-time_to_second_star"
+  },
+  "scoreDiff": {
+    buttonText: "Score diff",
+    header: "Points behind the leader",
+    desc: `Initially sorted by position in the list.
+          Table shows how far behind the leader players are.
+          Medals are awarded to the fastest players.`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars,
+    },
+    dataname: "table-score_diff"
+  },
+  "Score diff Chart": {
+    isChart: true,
+    buttonText: "Score diff Chart",
+    header: "",
+    desc: "",
+    opts: {vAxis: { logScale: 'True', title: 'Points behind the leader' }},
+    dataname: "graph-scorediff_graph"
+  },
+  "globalScore": {
+    buttonText: "Global score",
+    header: "Global score",
+    desc: `Initially sorted by position in the list.
+          Table shows how many global scores were achieved on a daily basis.
+          Medals are awarded to the fastest players.
+          <br>
+          <span id="global_result">
+          `,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars,
+    },
+    dataname: "table-global_score",
+    configFunction: (datakey, config) => globalResults(datakey, config)
+  },
+  "dailyPosition": {
+    buttonText: "Daily position",
+    header: "Daily position",
+    desc: `Initially sorted by position in the list.
+          Table shows the position each player achieved per problem.
+          Medals are awarded to the fastest players.`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars,
+    },
+    dataname: "table-accumulated_position",
+  },
+  "Daily position Chart": {
+    isChart: true,
+    buttonText: "Daily position Chart",
+    header: "",
+    desc: "",
+    opts: {vAxis: { logScale: 'False', title: 'Position' }},
+    dataname: "graph-daily_position_graph"
+  },
+  "tobiiScore": {
+    buttonText: "Tobii Score",
+    header: "Tobii score",
+    desc: `Initially sorted by position in the list.
+          ...tobii score explanation.
+          Medals are awarded to the fastest players.`,
+    opts: {
+      columnDefs: two_star_coldefs,
+      domLayout: 'autoHeight',
+      defaultColDef: default_coldefs_two_stars,
+    },
+    dataname: "table-global_score",
+  },
+}
 
 window.onload = function() {
   const pmedals_best_times = fetch(makeUrl("var-medals_best_time"))
