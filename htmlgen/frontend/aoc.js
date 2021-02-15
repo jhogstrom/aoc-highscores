@@ -35,28 +35,28 @@ function maxDays() {
 }
 
 function oneStarHeaders() {
-  result = []
-  for (var i = 1; i <= maxDays(); i++)
+  result = [];
+  for (let i = 1; i <= maxDays(); i++)
   {
     result.push({
       "headerName": `${i}/*->**`,
       "headerTooltip": `Dec ${i} *->**`,
       "field": `d${i}`});
   }
-  return result
+  return result;
 }
 
 function twoStarHeaders() {
-  result = []
-  for (var day = 1; day <= maxDays(); day++)
+  result = [];
+  for (let day = 1; day <= maxDays(); day++)
   {
-    for (var star = 0; star < 2; star++)
+    for (let star = 0; star < 2; star++)
     result.push({
       "headerName": `${day}/${star+1}`,
       "headerTooltip": `Dec ${day} *${star+1}`,
       "field": `d${day}_${star}`});
   }
-  return result
+  return result;
 }
 
 const default_coldefs_two_stars = {
@@ -108,20 +108,20 @@ const coldefs_default = [
     "headerTooltip":
     "Tobii score"
   }
-]
+];
 
 var two_star_coldefs = [...coldefs_default, ...twoStarHeaders()];
 var one_star_coldefs = [...coldefs_default, ...oneStarHeaders()];
 
 function globalResults(datakey, config) {
   const grid = config[datakey].opts.api;
+  const playersWithGlobalScore = [];
 
-  const playersWithGlobalScore = []
   grid.forEachNode(function(node, index) {
     const data = node.data;
-    for (var i = 0; i < data.length; i++) {
+    for (let i = 0; i < data.length; i++) {
       let keys = Object.keys(data[i]);
-      for (var j = 5; j < keys.length; j++) {
+      for (let j = 5; j < keys.length; j++) {
         key = keys[j]
         if (data[i][key] > 0) {
           console.log(data[i].name);
@@ -131,25 +131,20 @@ function globalResults(datakey, config) {
     }
   });
 
-  el = document.querySelector("#global_result");
+  const el = document.querySelector("#global_result");
   if (!el) return;
-  if (playersWithGlobalScore.length == 0)
-  {
+  if (playersWithGlobalScore.length == 0) {
     el.innerHTML = "<br>Maybe tomorrow someone will be in the global top 100... Good luck :)";
-  }
-  else
-  {
+  } else {
     el.innerHTML = "<br>Congratulations " + playersWithGlobalScore.join() + "!";
   }
 }
-
 
 function fillData(rows) {
     var data = new google.visualization.DataTable();
     // Why is this line required??
     data.addColumn('number', 'X');
-    for (var i = 0; i < all_players.length; i++)
-    {
+    for (let i = 0; i < all_players.length; i++) {
         data.addColumn('number', all_players[i]);
     }
     data.addRows(rows);
@@ -157,37 +152,38 @@ function fillData(rows) {
 };
 
 function drawChart(elementId, rows, opts) {
-    var options = {
+    const options = {
         width: $('#tabmenu').width(),
         height: 1000,
         left: 20,
         top: 20,
         hAxis: { title: 'day/star' },
         explorer: {zoomDelta: 1.1},
-        // vAxis: { logScale: 'True', title: 'Points behind the leader' },
         ...opts
     };
-    var chart = new google.visualization.LineChart(document.getElementById(elementId));
+    const chart = new google.visualization.LineChart(document.getElementById(elementId));
     chart.draw(fillData(rows), options);
 }
 
 function stylePosMedals(player, column, medal_data) {
     // Is this a medal-cell?
-    const c = medal_data[column]
-    if (!c) { return; }
+    const c = medal_data[column];
+    if (!c) {
+      return;
+    }
 
     const medal = c[player];
     if (medal) {
-        return medal_css[medal]
+        return medal_css[medal];
     }
 }
 
 function zpad(s) {
-    return ("00" + s.toString()).slice(-2)
+    return ("00" + s.toString()).slice(-2);
 }
 
 function astime(data) {
-    var n = parseInt(data, 0);
+    let n = parseInt(data, 0);
 
     if (n == 0) {
         return "Winner";
@@ -197,34 +193,38 @@ function astime(data) {
         return data;
     }
 
-    var SECSINMIN = 60
-    var SECSINHOUR = SECSINMIN * 60
-    var HOURSINDAY = 24
-    var SECSINDAY = HOURSINDAY * SECSINHOUR
+    const SECSINMIN = 60;
+    const SECSINHOUR = SECSINMIN * 60;
+    const HOURSINDAY = 24;
+    const SECSINDAY = HOURSINDAY * SECSINHOUR;
 
-        var days = zpad((n / SECSINDAY) >> 0);
+    const days = zpad((n / SECSINDAY) >> 0);
     n = n % SECSINDAY;
-    hours = zpad((n / SECSINHOUR) >> 0);
+    const hours = zpad((n / SECSINHOUR) >> 0);
     n = n % SECSINHOUR;
-    minutes = zpad((n / SECSINMIN) >> 0)
+    const minutes = zpad((n / SECSINMIN) >> 0)
 
-    seconds = zpad(n % SECSINMIN);
+    const seconds = zpad(n % SECSINMIN);
 
     if (days != "00") {
         return `${days}.${hours}:${minutes}:${seconds}`;
     };
-    return `${hours}:${minutes}:${seconds}`
+    return `${hours}:${minutes}:${seconds}`;
 };
 
+function getColumnIndex(params) {
+  const colId = params.column.colId;
+  const columns = params.columnApi.columnController.columnDefs;
+  for (let i = 0; i < columns.length; i++) {
+      if (columns[i].field == colId) {
+          return i;
+      }
+  }
+  return 0;
+}
+
 function timedelta_to_string(params) {
-    const colId = params.column.colId;
-    const columns = params.columnApi.columnController.columnDefs;
-    for (i = 0; i < columns.length; i++) {
-        if (columns[i].field == colId) {
-            break;
-        }
-    }
-    if (i < 5) {
+    if (getColumnIndex(params) < 5) {
         return params.value;
     }
     return astime(params.value);
@@ -250,7 +250,7 @@ function medalPainter_star2(params) {
 };
 
 function getSortColumn(columns) {
-  for (i = 0; i < columns.length; i++) {
+  for (let i = 0; i < columns.length; i++) {
     if (columns[i].sortIndex == 0) {
       return i;
     }
@@ -265,31 +265,29 @@ function sortString(s1, s2) {
 }
 
 function comparator(valueA, valueB, nodeA, nodeB, isInverted) {
-  colIndex = getSortColumn(nodeA.columnApi.getColumnState());
+  const colIndex = getSortColumn(nodeA.columnApi.getColumnState());
 
-  var k = Object.keys(nodeA.data)[colIndex];
+  const k = Object.keys(nodeA.data)[colIndex];
 
   if (colIndex==0) { // Name
     return sortString(nodeA.data[k], nodeB.data[k]);
   }
 
-  // Map null -> 999 to make those values sort last
-  var v1 = (nodeA.data[k] == null) ? 10 * 365 * 24 * 3600 : nodeA.data[k];
-  var v2 = (nodeB.data[k] == null) ? 10 * 365 * 24 * 3600 : nodeB.data[k];
+  // Map null -> [ten years into the future] to make those values sort last
+  const tenYears = 10 * 365 * 24 * 3600;
+  const v1 = (nodeA.data[k] == null) ? tenYears : nodeA.data[k];
+  const v2 = (nodeB.data[k] == null) ? tenYears : nodeB.data[k];
   return v1 - v2;
 }
 
 function restoreTab() {
   const urlParams = new URLSearchParams(window.location.search);
-  var tab = urlParams.get('tab');
-  console.log("tab", tab)
+  const tab = urlParams.get('tab') || "sectionLeaderboard";
+  const buttonId = `btn_${tab.slice("section".length)}`;
+  const button =  document.getElementById(buttonId);
 
-  const buttonId = tab ? tab + "_btn" : "btn_Leaderboard";
-  tab = tab || "sectionLeaderboard"
-
-  button =  document.getElementById(buttonId);
   if (button) {
-    openTab(button, tab, charts)
+    openTab(button, tab, charts);
   }
 }
 
@@ -323,7 +321,7 @@ function openTab(target, tabName, config) {
     console.log("Using pregenerated widget")
     return;
   };
-  generated.push(datakey)
+  generated.push(datakey);
   const widgetConfig = config[datakey];
 
   const urlRoot = "https://scoreboard-html.s3.us-east-2.amazonaws.com";
@@ -332,40 +330,32 @@ function openTab(target, tabName, config) {
     url = `${urlRoot}/${boardId}_${year}_${widgetConfig.dataname}.json`;
     console.log(`${widgetConfig.dataname} -> ${url}`);
   }
+  else {
+    throw Error("Missing dataname in config-sctructure");
+  }
 
-
-
-  var widgetPromise
+  let widgetPromise;
   if (datatype == "table") {
-    g = new agGrid.Grid(
+    new agGrid.Grid(
       document.querySelector(`#table${datakey}`),
       widgetConfig.opts);
-    if (widgetConfig.dataname){
-      console.log("loading data for ", datakey);
-      widgetPromise = fetch(url)
-        .then(response => response.json())
-        .then(data => widgetConfig.opts.api.setRowData(data));
-    }
+
+    console.log("loading data for ", datakey);
+    widgetPromise = fetch(url)
+      .then(response => response.json())
+      .then(data => widgetConfig.opts.api.setRowData(data));
   } else if (datatype == "chart") {
-    if (widgetConfig.dataname) {
-      console.log(`${datakey} <- ${url}`);
-      widgetPromise = fetch(url)
-        .then(response => response.json())
-        .then(data => drawChart(
-          `chart${datakey}`,
-          data,
-          widgetConfig.opts));
-    } else {
-      drawChart(
+    console.log(`${datakey} <- ${url}`);
+    widgetPromise = fetch(url)
+      .then(response => response.json())
+      .then(data => drawChart(
         `chart${datakey}`,
-        widgetConfig.data,
-        widgetConfig.opts);
-    }
-    return;
+        data,
+        widgetConfig.opts));
   } else {
     console.warn("Unknown type: ", datatype);
   }
-  if (widgetConfig.configFunction) {
+  if (widgetPromise && widgetConfig.configFunction) {
     widgetPromise.then(() => widgetConfig.configFunction(datakey, config));
   }
 };
@@ -373,7 +363,7 @@ function openTab(target, tabName, config) {
 function createMenu(config) {
     // var menu = document.getElementById("tabmenu");
     console.log($("#tabmenu"));
-    for (chart in charts) {
+    for (const chart in charts) {
       // console.log(charts[chart].name)
       $("#tabmenu").append(`
         <button id="btn_${chart}"
@@ -403,4 +393,7 @@ function createMenu(config) {
     }
 }
 
-
+window.onload = function() {
+  createMenu(charts);
+  restoreTab();
+}
