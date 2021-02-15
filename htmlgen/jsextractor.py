@@ -30,11 +30,11 @@ class jsextractor():
             f.write(self.medals_star2("medals_star2"))
 
             # Column definitions
-            f.write(self.coldefs_two_stars("two_star_coldefs"))
-            f.write(self.coldefs_one_star("one_star_coldefs"))
-            f.write(self.default_coldefs_two_stars("default_coldefs_two_stars"))
-            f.write(self.default_coldefs_two_stars_time("default_coldefs_two_stars_time"))
-            f.write(self.default_coldefs_one_stars_time("default_coldefs_one_stars_time"))
+            # f.write(self.coldefs_two_stars("two_star_coldefs"))
+            # f.write(self.coldefs_one_star("one_star_coldefs"))
+            # f.write(self.default_coldefs_two_stars("default_coldefs_two_stars"))
+            # f.write(self.default_coldefs_two_stars_time("default_coldefs_two_stars_time"))
+            # f.write(self.default_coldefs_one_stars_time("default_coldefs_one_stars_time"))
 
             # # Table data
             # f.write(self.daily_position("d_daily_position"))

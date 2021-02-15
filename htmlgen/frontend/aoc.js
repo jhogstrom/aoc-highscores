@@ -22,6 +22,97 @@ const medal_css = {
     },
 }
 
+const boardId = "34481";
+const year = "2020";
+
+function maxDays() {
+  const now = new Date();
+  // getMonth returns 0..11
+  if (now.getMonth() == 11 && now.getFullYear() == parseInt(year)) {
+    return now.getDate();
+  }
+  return 25;
+}
+
+function oneStarHeaders() {
+  result = []
+  for (var i = 1; i <= maxDays(); i++)
+  {
+    result.push({
+      "headerName": `${i}/*->**`,
+      "headerTooltip": `Dec ${i} *->**`,
+      "field": `d${i}`});
+  }
+  return result
+}
+
+function twoStarHeaders() {
+  result = []
+  for (var day = 1; day <= maxDays(); day++)
+  {
+    for (var star = 0; star < 2; star++)
+    result.push({
+      "headerName": `${day}/${star+1}`,
+      "headerTooltip": `Dec ${day} *${star+1}`,
+      "field": `d${day}_${star}`});
+  }
+  return result
+}
+
+const default_coldefs_two_stars = {
+  "sortable": true,
+  "width": 70,
+  "comparator": comparator,
+  "cellStyle": medalPainter,
+  "type": "numericColumn"};
+
+const default_coldefs_two_stars_time = {
+  "sortable": true,
+  "width": 120,
+  "comparator": comparator,
+  "cellStyle": medalPainter,
+  "type": "numericColumn",
+  "valueFormatter": timedelta_to_string};
+
+const default_coldefs_one_stars_time = {
+  "sortable": true,
+  "width": 120,
+  "comparator": comparator,
+  "cellStyle": medalPainter_star2,
+  "type": "numericColumn",
+  "valueFormatter": timedelta_to_string};
+
+const coldefs_default = [
+  {
+    "field": "name",
+    "resizable": true,
+    "pinned": "left",
+    "width": 200
+  },
+  {
+    "field": "T",
+    "width": 70,
+    "headerTooltip": "Total score"
+  },
+  {
+    "field": "G",
+    "headerTooltip":
+    "Global score"
+  },
+  {
+    "field": "S",
+    "headerTooltip": "# stars (problems solved)"
+  },
+  {
+    "field": "Tob",
+    "headerTooltip":
+    "Tobii score"
+  }
+]
+
+var two_star_coldefs = [...coldefs_default, ...twoStarHeaders()];
+var one_star_coldefs = [...coldefs_default, ...oneStarHeaders()];
+
 function globalResults(datakey, config) {
   const grid = config[datakey].opts.api;
 
@@ -236,8 +327,6 @@ function openTab(target, tabName, config) {
   const widgetConfig = config[datakey];
 
   const urlRoot = "https://scoreboard-html.s3.us-east-2.amazonaws.com";
-  const boardId = "34481";
-  const year = "2020";
   var url;
   if (widgetConfig.dataname) {
     url = `${urlRoot}/${boardId}_${year}_${widgetConfig.dataname}.json`;
