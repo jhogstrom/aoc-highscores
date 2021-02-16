@@ -61,8 +61,11 @@ def get_scores(year: str, sessionid: str, boardid: str):
 
 threads = []
 
-def generate_data_proc(leaderboard: LeaderBoard, name: str, datafunc) -> None:
-    filekey = f'{leaderboard.boardid}_{leaderboard.year}_{name}.json'
+def generate_data_proc(
+        leaderboard: LeaderBoard,
+        name: str,
+        datafunc) -> None:
+    filekey = f'{leaderboard.year}/{leaderboard.uuid}/{name}.json'
     logger.debug(f"Uploading {filekey}")
     html_bucket.put_object(
         Body=datafunc(),
@@ -78,11 +81,12 @@ def generate_data(leaderboard: LeaderBoard, name: str, datafunc) -> None:
     threads.append(process)
 
 def generatelist(*,
-        sessionid: str,
-        year: str,
-        title: str,
         boardid: str,
+        year: str,
         namemap: dict,
+        sessionid: str,
+        title: str,
+        uuid: str,
         global_scores: dict):
     logger.info(f"Reading data for {title}/{year}")
     scoredict = get_scores(year, sessionid, boardid)
@@ -92,6 +96,7 @@ def generatelist(*,
         year=year,
         highestday=25,
         namemap=namemap,
+        uuid=uuid,
         global_scores=global_scores)
     # leaderboard.update_global_scores()
     leaderboard.post_process_stats()
@@ -132,10 +137,12 @@ if __name__ == "__main__":
         year = c.get('years', ["2020"])[0]
         boardid = c['boardid']
         title = c['title']
+        uuid = c['uuid']
         generatelist(
             sessionid=sessionid,
             year=year,
             title=title,
             boardid=boardid,
             namemap=namemap.get(c['boardid'], {}),
+            uuid=uuid,
             global_scores={'names': []})

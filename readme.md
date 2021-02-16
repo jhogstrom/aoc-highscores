@@ -1,9 +1,75 @@
 AoC Highscore generator
 ===
 
+To do
+===
+Big
+--
+* Improve the documentation in this file explaining what each part does (databases, generators, frontend, slack interface)
+
+Small
+--
+* ~~Add GUID to boards~~
+* ~~Use guid instead of boardID for generated files~~
+* ~~Generate files into \<year>\\\<guid>\\\<file> in S3~~
+* ~~Handle parameters in page~~
+* ~~Generate some nicer error page if the parameters don't point to a valid file set~~
+* Add cronjob to regenerate files
+* Add generation timestamp to client side (and display it)
+* Figure out how to filter out people with zero score (should be possible in grids)
+* Figure out how to show blocked days
+* Move blocked days to database?
+
+
+
+
 Deployment
 ***
 Run `cdk deploy` in the working directory.
+
+Flow
+***
+Once deployed the flow of the system is as follows:
+
+
+    [browser] (user choice)
+        ^
+        | * Browser fetches html + data from S3
+        | * Tables are rendered client side
+        ^
+    [scoreboard] (S3)
+        ^
+        |
+        ^
+    [htmlgen] (lambda)
+        ^
+        | * Updates the global scores if required
+        | * Reads the message and
+        |   - generates new data files to S3.
+        |   - Makes a notification in DynDB on
+        |     when the files where generated
+        ^
+    [scoreboard-generator_queue] (sqs)
+        ^
+        | * sends one message per eligeble board
+        ^
+    [spawner] (lambda)
+        ^
+        | * Spawner reads the board configurations
+        |
+        ^
+    [scoreboard-config] (dynamoDB)
+        ^
+        | The slack integration has CRUD
+        | capabilities on the board configuration
+        ^
+    [bot] (lambda)
+        ^
+        |
+        ^
+    [slack] (slack client)
+
+
 
 Configuration files
 ***
@@ -26,7 +92,8 @@ _namemap.json_
             "boardid": "<your list id>",
             "sessionid": "<your session id>>",
             "title": "My own AoC highscore list",
-            "year": ["2020"]
+            "year": ["2020", ...],
+            "uuid": "<uuid>"
         },
         ...
     ]

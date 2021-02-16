@@ -140,6 +140,7 @@ class LeaderBoard(BaseObj):
             year: str,
             highestday: int,
             namemap: dict,
+            uuid=str,
             global_scores: dict):
         self.year = year
         self.title = title
@@ -147,6 +148,7 @@ class LeaderBoard(BaseObj):
         self.boardid = score['owner_id']
         self.players = [Player(_, daycount=highestday, leaderboard=self) for _ in score['members'].values()]
         self.global_scores = global_scores
+        self.uuid = uuid
 
         if namemap:
             for p in [_ for _ in self.players if _.name in namemap]:

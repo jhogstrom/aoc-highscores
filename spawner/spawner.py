@@ -122,9 +122,10 @@ def generate_messages():
         for year in config['years']:
             msg = {
                 'boardid': config['boardid'],
-                'sessionid' : config['sessionid'],
-                'title' : config['title'],
-                'year' : year,
+                'sessionid': config['sessionid'],
+                'title': config['title'],
+                'year': year,
+                'uuid': config.get('uuid', config['boardid'])
             }
 
             if should_send_message(timestamps, msg):

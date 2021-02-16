@@ -1,14 +1,15 @@
 import json
 import os
 import urllib
+import uuid
+import datetime
+import logging
+import requests
 from urllib import parse
 from urllib import request
 from urllib.parse import urlparse
 import boto3
 from boto3.dynamodb.conditions import Attr
-import datetime
-import logging
-import requests
 
 config_table_name = os.environ.get("DDB_CONFIG", "scoreboard-boardconfig")
 config_table = boto3.resource('dynamodb').Table(config_table_name)
@@ -95,7 +96,8 @@ def add_board(boardid: str, sessionid: str, title) -> str:
             'boardid': boardid,
             'sessionid': sessionid,
             'title': title,
-            'years': [year]
+            'years': [year],
+            'uuid': str(uuid.uuid1())
         }
     }
     config_table.put_item(Item=item)

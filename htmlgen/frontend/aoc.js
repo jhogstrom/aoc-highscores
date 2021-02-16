@@ -24,8 +24,7 @@ const medal_css = {
 }
 
 const urlRoot = "https://scoreboard-html.s3.us-east-2.amazonaws.com";
-const boardId = "34481";
-const year = "2020";
+var year, uuid;
 
 function maxDays() {
   const now = new Date();
@@ -40,7 +39,7 @@ function makeUrl(s) {
   if (!s) {
     throw Error("Cannot generate Url from empty string-token.")
   }
-  const url = `${urlRoot}/${boardId}_${year}_${s}.json`;
+  const url = `${urlRoot}/${year}/${uuid}/${s}.json`;
   console.log(`${s} -> ${url}`);
   return url;
 }
@@ -558,7 +557,28 @@ const charts = {
   },
 }
 
+function handleError(err) {
+  el = document.getElementById("error");
+  el.innerText = "Unable to find the requested page. Wrong guid? Wrong year?";
+}
+
+function handleParams()
+{
+  const params = new URLSearchParams(window.location.search)
+  const now = new Date();
+  let defaultYear = now.getFullYear().toString();
+  if (now.getMonth() != 11) {
+    defaultYear = (now.getFullYear() - 1).toString();
+  }
+
+  year=params.get("year") || defaultYear
+  uuid = params.get("uuid") || "21ae6a02-ec22-469e-ae39-c63e921b309b";
+  console.log("params:", year, uuid);
+}
+
 window.onload = function() {
+  handleParams();
+
   fetch(makeUrl("var-config"))
     .then(response => response.json())
     .then(data => {
@@ -570,5 +590,6 @@ window.onload = function() {
     .then(() => {
         createMenu(charts);
         restoreTab();
-      });
+      })
+      .catch(err => handleError(err));
 }
