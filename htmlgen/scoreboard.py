@@ -241,7 +241,9 @@ class LeaderBoard(BaseObj):
                         if not self.day_excluded(day):
                             player.totalscore += player_count - index
                             player.accumulatedtobiiscoretotal += index
-                        thestar.offsetfromwinner = thestar.completiontime - publish_time - self.days[day][star].besttime
+                        besttime = self.days[day][star].besttime
+                        if besttime is not None:
+                            thestar.offsetfromwinner = thestar.completiontime - publish_time - besttime
                         laststar[player] = thestar.completiontime
                     else:
                         if not self.day_excluded(day):

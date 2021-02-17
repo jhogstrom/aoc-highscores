@@ -3,6 +3,8 @@ import json
 import logging
 import requests
 
+logger = logging.getLogger(("aoc"))
+
 class DataRepresentation():
     def __str__(self):
         return self.Filename()
@@ -28,14 +30,14 @@ class Downloader():
         if sessionid:
             self.jar.set("session", sessionid, domain=".adventofcode.com", path='/')
         else:
-            logging.warning("NOT setting sessionid")
+            logger.warning("NOT setting sessionid")
 
     def get_data(self, representation: DataRepresentation):
         url = representation.url()
-        logging.debug(f"Downloading from {url}")
+        logger.debug(f"Downloading from {url}")
         headers = {'user-agent': 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.0.3705)'}
         r = requests.get(url, cookies=self.jar, headers=headers)
-        logging.debug(f"Downloading done... [{r.content.decode()[:20]}]")
+        logger.debug(f"Downloading done... [{r.content.decode()[:20]}]")
         return r.content.decode()
 
 class Cache():

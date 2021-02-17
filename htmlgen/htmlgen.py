@@ -91,9 +91,9 @@ def process_messages(messages):
     years = {json.loads(msg['body'])['year'] for msg in messages}
     get_global_scores(years)
 
-    for msg in messages:
+    for message in messages:
         try:
-            msgstruct = json.loads(msg['body'])
+            msg = json.loads(message['body'])
             handle_record(
                 boardid=msg['boardid'],
                 year=msg['year'],

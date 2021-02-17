@@ -1,6 +1,7 @@
 import json
 import re
 import logging
+import datetime
 from collections import defaultdict
 
 from scoreboard import LeaderBoard
@@ -9,10 +10,11 @@ logger = logging.getLogger("aoc")
 
 
 class jsextractor():
-    def __init__(self, board):
+    def __init__(self, board, extravars: dict):
         self.indent = {}
         # self.indent = {"indent": 3}
         self.board = board
+        self.extravars = extravars
 
 
     def _make_return_value(self, data, *, make_tokens: bool = False) -> str:
@@ -45,7 +47,8 @@ class jsextractor():
             'all_players': [_.name for _ in self.board.ordered_players if _.totalscore > 0],
             'medals_best_time': self._medals_best_time(),
             'medals_star2': self._medals_star2(),
-            'title': self.board.title
+            'title': self.board.title,
+            'extravars': self.extravars
         }
         return self._make_return_value(data)
 

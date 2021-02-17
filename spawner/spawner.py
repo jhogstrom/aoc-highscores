@@ -57,7 +57,9 @@ def get_timestamps() -> dict:
         result[item['id']] = item['lastgen']
     return result
 
-def should_send_message(timestamps: dict, msg: dict) -> bool:
+def should_send_message(
+        last_timestamp: int,
+        msg: dict) -> bool:
     """
     Determine of the message should be sent.
 
@@ -72,20 +74,16 @@ def should_send_message(timestamps: dict, msg: dict) -> bool:
     * 2 minutes if the current time is earlier than 01:00 (America/New York)
 
     Args:
-        timestamps (dict): Last file generation timestamps
+        last_timestamp (int): Latest time file was regenerated
         msg (dict): msg with boardinfo
 
     Returns:
         bool: True if the board requires regeneration
     """
-    if not msg:
-        return False
-
-    last_msg = timestamps.get(f"{msg['year']}|{msg['boardid']}", None)
-    if not last_msg:
+    if not last_timestamp:
         return True
 
-    last_time = datetime.datetime.fromtimestamp(last_msg)
+    last_time = datetime.datetime.fromtimestamp(last_timestamp)
     tz = pytz.timezone('America/New_York')
     now = datetime.datetime.now(tz=tz)
     age = now - last_time
@@ -96,14 +94,14 @@ def should_send_message(timestamps: dict, msg: dict) -> bool:
         cool_off = datetime.timedelta(weeks=2)
     elif now.day > 25:
         cool_off = datetime.timedelta(hours=8)
-    elif now.hour >= 1:
+    elif now.hour >= 3:
         cool_off = datetime.timedelta(hours=1)
     else:
-        cool_off = cool_off = datetime.timedelta(minutes=2)
+        cool_off = datetime.timedelta(minutes=2)
 
     logging.debug(f"{msg['year']}|{msg['boardid']}: last_time: {last_time} age: {age}, cool_off: {cool_off}. Regenerate: {age > cool_off}")
 
-    return age > cool_off
+    return age > cool_off.total_seconds()
 
 
 
@@ -125,10 +123,11 @@ def generate_messages():
                 'sessionid': config['sessionid'],
                 'title': config['title'],
                 'year': year,
-                'uuid': config.get('uuid', config['boardid'])
+                'uuid': config.get('uuid', config['boardid']),
+                'last_timestamp': timestamps.get(f"{year}|{config['boardid']}")
             }
 
-            if should_send_message(timestamps, msg):
+            if should_send_message(msg['last_timestamp'], msg):
                 messages.append(sqs_message(msg))
 
     if messages:

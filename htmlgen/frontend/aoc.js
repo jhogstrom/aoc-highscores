@@ -342,9 +342,20 @@ function openTab(target, tabName, config) {
       widgetConfig.opts);
 
     console.log("loading data for ", datakey);
+    const api = widgetConfig.opts.api;
     widgetPromise = fetch(url)
       .then(response => response.json())
-      .then(data => widgetConfig.opts.api.setRowData(data));
+      .then(data => api.setRowData(data))
+      .then(() => {
+        const filterInstance = api.getFilterInstance("T");
+        filterInstance.setModel({
+          filterType: 'number',
+          type: 'notEqual',
+          filter: '0'
+        });
+        api.onFilterChanged();
+        filters.push(datakey);
+      });
   } else if (datatype == "chart") {
     console.log(`${datakey} <- ${url}`);
     widgetPromise = fetch(url)
@@ -360,6 +371,33 @@ function openTab(target, tabName, config) {
     widgetPromise.then(() => widgetConfig.configFunction(datakey, config));
   }
 };
+
+var filters = [];
+
+function switchFilter(chart) {
+  const api = charts[chart].opts.api
+  const filterInstance = api.getFilterInstance("T");
+  const button = document.getElementById(`filter${chart}`);
+  if (filters.includes(chart)) {
+    filters = filters.filter(function(value, index, arr){
+      return value != chart;
+    });
+    var filter = null
+    button.innerText = "Hide inactive";
+  }
+  else {
+    filters.push(chart);
+    var filter = {
+      filterType: 'number',
+      type: 'notEqual',
+      filter: '0'
+    };
+    button.innerText = "Show inactive";
+  }
+  filterInstance.setModel(filter);
+  api.onFilterChanged();
+  console.log(filters);
+}
 
 function createMenu(config) {
     // var menu = document.getElementById("tabmenu");
@@ -377,17 +415,22 @@ function createMenu(config) {
       if (config[chart].isChart) {
         $("#tables").append(`
         <div id="section${chart}" class="w3-container w3-border tab" style="display:none; height: 100%">
+          <p>${document.title}</p>
           <h1>${config[chart].header}</h1>
           <p>${config[chart].desc}</p>
           <div class="chart" id="chart${chart}"></div>
+          <p align="right">Data fetched on ${charts.generatedTime}.</p>
         </div>
         `);
       } else {
         $("#tables").append(`
         <div id="section${chart}" class="w3-container w3-border tab" style="display:none; height: 100%">
+          <p>${document.title}</p>
           <h1>${config[chart].header}</h1>
+          <button id="filter${chart}" onclick="switchFilter('${chart}')">Show inactive</button>
           <p>${config[chart].desc}</p>
           <div id="table${chart}" style="width: auto;" class="ag-theme-alpine"></div>
+          <p align="right">Data fetched on ${charts.generatedTime}.</p>
         </div>
         `);
       }
@@ -582,14 +625,15 @@ window.onload = function() {
   fetch(makeUrl("var-config"))
     .then(response => response.json())
     .then(data => {
-        document.title = data["title"];
+        document.title = `${data["title"]} - ${year}`;
         all_players = data["all_players"];
         medals_best_times = data["medals_best_time"];
         medals_star2 = data["medals_star2"];
+        charts.generatedTime = data.extravars.generated
       })
     .then(() => {
         createMenu(charts);
         restoreTab();
       })
-      .catch(err => handleError(err));
+    .catch(err => handleError(err));
 }
