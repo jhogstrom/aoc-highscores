@@ -89,6 +89,7 @@ def add_board(boardid: str, sessionid: str, title) -> str:
 
     year = str(datetime.date.today().year)
     title = " ".join(title)
+    uuid = str(uuid.uuid1())
 
     item = {
         'id': boardid,
@@ -97,11 +98,11 @@ def add_board(boardid: str, sessionid: str, title) -> str:
             'sessionid': sessionid,
             'title': title,
             'years': [year],
-            'uuid': str(uuid.uuid1())
+            'uuid': uuid
         }
     }
     config_table.put_item(Item=item)
-    return f"Added board {boardid} //{title}// for {year}."
+    return f"Added board {boardid} //{title}// for {year} -- uuid: {uuid}."
 
 
 def extend_board(boardid: str, year: str) -> str:
