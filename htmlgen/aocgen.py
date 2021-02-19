@@ -1,17 +1,15 @@
 import json
 import scores
-import pathlib
 import logging
 import os
 import boto3
-import sys
 import hashlib
 import datetime
 import math
-from threading import Thread
 from typing import Dict
 from jsextractor import jsextractor
 from botocore.exceptions import ClientError
+import concurrent.futures
 
 from scoreboard import LeaderBoard, ScoreboardRepresentation
 from s3cache import S3Cache
@@ -64,9 +62,7 @@ def get_scores(year: str, sessionid: str, boardid: str):
     representation = ScoreboardRepresentation(boardid, year)
     return get_data(representation, sessionid)
 
-threads = []
-
-def generate_data_proc(
+def file_upload(
         filekey: str,
         func) -> None:
     logger.debug(f"Uploading {filekey}?")
@@ -93,12 +89,16 @@ def generate_data_proc(
     else:
         logger.debug(f"Up to date: {filekey} (no upload required)")
 
-def generate_data(filekey: str, func) -> None:
-    process = Thread(
-        target=generate_data_proc,
-        args=[filekey, func])
-    process.start()
-    threads.append(process)
+def generate_data(leaderboard, params: dict):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(
+                file_upload,
+                f'{leaderboard.year}/{leaderboard.uuid}/{name}.json', func)
+            for name, func in params.items()]
+
+    [f.result() for f in futures]
+
 
 def get_highest_day(year: int) -> int:
     now = datetime.datetime.today()
@@ -153,11 +153,7 @@ def generatelist(*,
         "var-config": jse.config
     }
 
-    for name, func in generation_params.items():
-        generate_data(f'{leaderboard.year}/{leaderboard.uuid}/{name}.json', func)
-
-    for process in threads:
-        process.join()
+    generate_data(leaderboard, generation_params)
 
 
 def get_config(filename):
