@@ -2,10 +2,13 @@ from aws_cdk import (
     core,
     aws_lambda_event_sources,
     aws_dynamodb,
-    aws_s3
+    aws_s3,
+    aws_lambda
 )
 import aws
 import os
+from aws_cdk.aws_events import Rule, Schedule
+import aws_cdk.aws_events_targets as targets
 
 DESTROY=core.RemovalPolicy.DESTROY
 RETAIN=core.RemovalPolicy.RETAIN
@@ -91,7 +94,11 @@ class ScoreboardStack(core.Stack):
             auto_delete_objects=True,
             block_public_access=None,
             website_error_document="error.html",
-            website_index_document="index.html")
+            website_index_document="index.html",
+            cors=[aws_s3.CorsRule(
+                allowed_methods=[aws_s3.HttpMethods.GET],
+                allowed_headers=["*"],
+                allowed_origins=["*"])])
         htmlbucket.grant_public_access()
         core.CfnOutput(
                 self,
@@ -114,9 +121,20 @@ class ScoreboardStack(core.Stack):
             layers=layer.layers)
         boardconfig = aws.Table(self,
             "boardconfig",
+            stream=aws_dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
             removal_policy=CONFIGDATA)
         boardconfig.grant_read_data(spawner)
         spawner.add_environment("DDB_CONFIG", boardconfig.table_name)
+
+        boardconfig_source = aws_lambda_event_sources.DynamoEventSource(
+            boardconfig,
+            starting_position=aws_lambda.StartingPosition.LATEST
+        )
+
+        boarddeletions = aws.Function(self, "boarddeletions")
+        boarddeletions.add_event_source(boardconfig_source)
+        boarddeletions.add_environment("S3_HTML", htmlbucket.bucket_name)
+        htmlbucket.grant_read_write(boarddeletions)
 
         generator_queue = aws.Queue(self, "generator_queue")
         generator_queue.grant_send_messages(spawner)
@@ -147,5 +165,38 @@ class ScoreboardStack(core.Stack):
         namemap.grant_read_write_data(slack.handler)
         boardconfig.grant_read_write_data(slack.handler)
 
-
-
+        spawnertarget = targets.LambdaFunction(spawner)
+        # Rule(self,
+        #     "RestOfYear",
+        #     description="Fire every week jan-nov",
+        #     rule_name="RestOfYear",
+        #     schedule=Schedule.cron(minute="0", hour="4", week_day="0", month="JAN-NOV"),
+        #     targets=[spawnertarget])
+        # Rule(self,
+        #     "Mornings_December",
+        #     description="Every second minute 06-08 (CET) 1-25 dec",
+        #     rule_name="RestOfYear",
+        #     schedule=Schedule.cron(minute="0/2", hour="6-7", day="1-25", month="DEC"),
+        #     targets=[spawnertarget])
+        # Rule(self,
+        #     "Daytime_December",
+        #     description="Every 20 minutes 08-15 (CET) 1-25 dec",
+        #     rule_name="RestOfYear",
+        #     schedule=Schedule.cron(minute="0/20", hour="8-15", day="1-25", month="DEC"),
+        #     targets=[spawnertarget])
+        # Rule(self,
+        #     "Nighttime_December",
+        #     description="Every hour 00-6,15-24 (CET) 1-25 dec",
+        #     rule_name="RestOfYear",
+        #     schedule=Schedule.cron(
+        #         minute="0",
+        #         hour="0-5,14-23",
+        #         day="1-25",
+        #         month="DEC"),
+        #     targets=[spawnertarget])
+        # Rule(self,
+        #     "EndOf_December",
+        #     description="Every hour 9-23 (CET) 25-31 dec",
+        #     rule_name="RestOfYear",
+        #     schedule=Schedule.cron(minute="0", hour="9-23", day="26-31", month="DEC"),
+        #     targets=[spawnertarget])

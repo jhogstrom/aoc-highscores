@@ -17,6 +17,7 @@ aws-cdk.aws-ecs
 aws-cdk.aws-elasticloadbalancing
 aws-cdk.aws-elasticloadbalancingv2
 aws-cdk.aws-events
+aws_cdk.aws_events_targets
 aws-cdk.aws-glue
 aws-cdk.aws-iam
 aws-cdk.aws-kinesis
