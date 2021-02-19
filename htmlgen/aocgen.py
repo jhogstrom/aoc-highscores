@@ -11,6 +11,7 @@ import math
 from threading import Thread
 from typing import Dict
 from jsextractor import jsextractor
+from botocore.exceptions import ClientError
 
 from scoreboard import LeaderBoard, ScoreboardRepresentation
 from s3cache import S3Cache
@@ -71,10 +72,17 @@ def generate_data_proc(
     logger.debug(f"Uploading {filekey}?")
     data = func()
     md5 = hashlib.md5(data.encode('utf-8')).hexdigest()
-    response = s3client.head_object(
-        Bucket=html_bucket_name,
-        Key=filekey)
-    if response["Metadata"].get("md5") != md5:
+    try:
+        response = s3client.head_object(
+            Bucket=html_bucket_name,
+            Key=filekey)
+        need_upload = response["Metadata"].get("md5") != md5
+    except ClientError:
+        need_upload = True
+    except Exception as e:
+        print(e)
+
+    if need_upload:
         logger.debug(f"Pushing {filekey} to S3")
         html_bucket.put_object(
             Body=data,
