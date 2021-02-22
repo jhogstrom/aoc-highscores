@@ -16,6 +16,7 @@ timestamps_table = boto3.resource('dynamodb').Table(timestamps_table_name)
 queue_name = os.environ.get('SQS_GENERATOR', "scoreboard-generator_queue")
 queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
 
+
 def sqs_message(msg: dict) -> dict:
     """
     Wrap msg in a message suited for SQS.
@@ -27,9 +28,10 @@ def sqs_message(msg: dict) -> dict:
         dict: A message to send to SQS
     """
     return {
-            'Id': msg['boardid'],
+            'Id': f"{msg['boardid']}-{msg['year']}",
             'MessageBody': json.dumps(msg)
         }
+
 
 def scan_table(table, **scan_kwargs):
     done = False
@@ -44,6 +46,7 @@ def scan_table(table, **scan_kwargs):
         start_key = response.get('LastEvaluatedKey', None)
         done = start_key is None
 
+
 def get_timestamps() -> dict:
     """
     Fetch the timestamps of the generated files and
@@ -56,6 +59,7 @@ def get_timestamps() -> dict:
     for item in scan_table(timestamps_table):
         result[item['id']] = item['lastgen']
     return result
+
 
 def should_send_message(
         last_timestamp: int,
@@ -83,8 +87,8 @@ def should_send_message(
     if not last_timestamp:
         return True
 
-    last_time = datetime.datetime.fromtimestamp(last_timestamp)
     tz = pytz.timezone('America/New_York')
+    last_time = datetime.datetime.fromtimestamp(last_timestamp, tz=tz)
     now = datetime.datetime.now(tz=tz)
     age = now - last_time
 
@@ -101,18 +105,18 @@ def should_send_message(
 
     logging.debug(f"{msg['year']}|{msg['boardid']}: last_time: {last_time} age: {age}, cool_off: {cool_off}. Regenerate: {age > cool_off}")
 
-    return age > cool_off.total_seconds()
-
+    return age.total_seconds() > cool_off.total_seconds()
 
 
 def generate_messages():
     timestamps = get_timestamps()
+    print(timestamps)
     messages = []
 
     # read all records from config_table
     # create and post a queue message for each record
     for item in scan_table(config_table):
-        config = item.get('config', None)
+        config = item.get('config')
         if config is None:
             logging.warning(f'Missing config: {item}')
             continue
@@ -124,8 +128,10 @@ def generate_messages():
                 'title': config['title'],
                 'year': year,
                 'uuid': config.get('uuid', config['boardid']),
-                'last_timestamp': timestamps.get(f"{year}|{config['boardid']}")
+                'last_timestamp': int(timestamps.get(f"{year}|{config['boardid']}", -1))
             }
+            print("key", f"{year}|{config['boardid']}")
+            print(msg)
 
             if should_send_message(msg['last_timestamp'], msg):
                 messages.append(sqs_message(msg))
@@ -138,6 +144,7 @@ def generate_messages():
 def main(event, context):
     n = generate_messages()
     logging.info(f'Sent {n} messages.')
+
 
 if __name__ == "__main__":
     n = generate_messages()

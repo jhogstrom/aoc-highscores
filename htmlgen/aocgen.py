@@ -62,6 +62,7 @@ def get_scores(year: str, sessionid: str, boardid: str):
     representation = ScoreboardRepresentation(boardid, year)
     return get_data(representation, sessionid)
 
+
 def file_upload(
         filekey: str,
         func) -> None:
@@ -85,9 +86,10 @@ def file_upload(
             ContentType='application/json',
             Key=filekey,
             Metadata={"md5": md5})
-        logger.debug(f"Uploading done")
+        logger.debug("Uploading done")
     else:
         logger.debug(f"Up to date: {filekey} (no upload required)")
+
 
 def generate_data(leaderboard, params: dict):
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -109,7 +111,8 @@ def get_highest_day(year: int) -> int:
     return math.min([25, now.day()])
 
 
-def generatelist(*,
+def generatelist(
+        *,
         boardid: str,
         year: str,
         namemap: dict,
@@ -136,7 +139,7 @@ def generatelist(*,
     }
 
     jse = jsextractor(leaderboard, extravars)
-    generation_params= {
+    generation_params = {
         "table-dailyposition": jse.daily_position,
         "table-accumulated_score": jse.accumulated_score,
         "table-time_to_complete": jse.time_to_complete,
@@ -161,9 +164,9 @@ def get_config(filename):
         return json.load(f)
 
 
-config = get_config("boards.json")
-namemap = get_config("namemap.json")
 if __name__ == "__main__":
+    config = get_config("boards.json")
+    namemap = get_config("namemap.json")
     for c in config:
         sessionid = c['sessionid']
         boardid = c['boardid']

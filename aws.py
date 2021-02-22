@@ -10,11 +10,13 @@ import hashlib
 from aws_cdk import (
     core,
     aws_dynamodb,
+    aws_events,
     aws_apigateway,
     aws_lambda,
     aws_logs,
     aws_s3,
-    aws_sqs)
+    aws_sqs,
+    aws_events_targets)
 
 
 def gen_name(scope: core.Construct, id: str):
@@ -165,6 +167,23 @@ class Bucket(aws_s3.Bucket):
         super().__init__(scope, id, **kwargs)
 
 
+class Rule(aws_events.Rule):
+    def __init__(
+            self,
+            scope: core.Construct,
+            id: str,
+            target: aws_lambda.Function = None,
+            **kwargs):
+        kwargs = get_params(locals())
+        if all([target, kwargs.get("targets")]):
+            raise Exception("You may only specify one of 'target' and 'targets")
+
+        if target:
+            kwargs.setdefault("targets", [aws_events_targets.LambdaFunction(target)])
+        kwargs.setdefault("rule_name", gen_name(scope, id))
+        super().__init__(scope, id, **kwargs)
+
+
 class PipLayers(core.Construct):
     def __init__(
             self,
@@ -256,7 +275,6 @@ class PipLayers(core.Construct):
                 with open(layer_unpack_dir / "md5sum") as f:
                     prev_md5 = f.read()
 
-
             if req_md5 != prev_md5:
                 print(f"Installing {layer_id} to {unpack_to_dir}")
                 layer_unpack_dir.mkdir(parents=True, exist_ok=True)
@@ -285,12 +303,11 @@ class PipLayers(core.Construct):
                 version_id,
                 code=code,
                 compatible_runtimes=compatible_runtimes,
-                layer_version_name = gen_name(scope, version_id),
+                layer_version_name=gen_name(scope, version_id),
                 **kwargs)
 
             self.idlayers[layer_id] = layer
             self.layers.append(layer)
-
 
     def get_dir_size(self, root_dir: str) -> int:
         """
@@ -433,7 +450,6 @@ class ResourceWithLambda(core.Construct):
         lambda_kwargs.setdefault("handler", f"{id}.main")
         if code:
             lambda_kwargs['code'] = code
-
 
         # TODO: Wrap this in a canarydeploy. That may be a breaking change unfortunately.
         handler = Function(

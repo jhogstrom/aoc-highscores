@@ -3,18 +3,20 @@ from aws_cdk import (
     aws_lambda_event_sources,
     aws_dynamodb,
     aws_s3,
-    aws_lambda
+    aws_s3_deployment,
+    aws_lambda,
+    aws_events
 )
 import aws
 import os
-from aws_cdk.aws_events import Rule, Schedule
-import aws_cdk.aws_events_targets as targets
 
-DESTROY=core.RemovalPolicy.DESTROY
-RETAIN=core.RemovalPolicy.RETAIN
 
-EPHEMERALDATA=DESTROY
-CONFIGDATA=DESTROY
+DESTROY = core.RemovalPolicy.DESTROY
+RETAIN = core.RemovalPolicy.RETAIN
+
+EPHEMERALDATA = DESTROY
+CONFIGDATA = DESTROY
+
 
 def read_token_from_file(filename: str) -> str:
     if not os.path.exists(filename):
@@ -45,23 +47,26 @@ class ScoreboardStack(core.Stack):
         # * Datacache-bucket
         #   * Allow generator to read and write to bucket
 
-        htmlgen = aws.Function(self,
+        htmlgen = aws.Function(
+            self,
             "htmlgen",
             layers=layer.layers,
             timeout=core.Duration.seconds(20),
             memory_size=1024)
 
         # id: str (boardid), name: str (username), value: str (replacement value)
-        namemap = aws.Table(self,
+        namemap = aws.Table(
+            self,
             "namemap",
             sort_key=aws_dynamodb.Attribute(
                 name='name',
                 type=aws_dynamodb.AttributeType.STRING),
-                removal_policy=CONFIGDATA)
+            removal_policy=CONFIGDATA)
         namemap.grant_read_data(htmlgen)
 
         # id: str (boardid), day: int, results_1: dict ({player: score, ...}), results_2: dict ({player: score, ...})
-        globalscores = aws.Table(self,
+        globalscores = aws.Table(
+            self,
             "globalscores",
             partition_key=aws_dynamodb.Attribute(
                 name='year',
@@ -70,7 +75,8 @@ class ScoreboardStack(core.Stack):
                 name='day',
                 type=aws_dynamodb.AttributeType.NUMBER),
             removal_policy=EPHEMERALDATA)
-        parse_globals = aws.Function(self,
+        parse_globals = aws.Function(
+            self,
             "parse_globals",
             layers=layer.layers,
             timeout=core.Duration.seconds(20),
@@ -79,7 +85,8 @@ class ScoreboardStack(core.Stack):
         globalscores.grant_read_write_data(parse_globals)
         globalscores.grant_read_data(htmlgen)
 
-        timestamps = aws.Table(self,
+        timestamps = aws.Table(
+            self,
             "timestamps",
             removal_policy=EPHEMERALDATA)
         htmlgen.add_environment("DDB_TIMESTAMPS", timestamps.table_name)
@@ -88,7 +95,8 @@ class ScoreboardStack(core.Stack):
         datacache = aws.Bucket(self, "datacache")
         datacache.grant_read_write(htmlgen)
 
-        htmlbucket = aws.Bucket(self,
+        htmlbucket = aws.Bucket(
+            self,
             "html",
             removal_policy=EPHEMERALDATA,
             auto_delete_objects=True,
@@ -109,6 +117,11 @@ class ScoreboardStack(core.Stack):
         htmlgen.add_environment("S3_HTML", htmlbucket.bucket_name)
         htmlgen.add_environment("DDB_NAMEMAP", namemap.table_name)
 
+        aws_s3_deployment.BucketDeployment(
+            self, "StaticHtml",
+            sources=[aws_s3_deployment.Source.asset("htmlgen/frontend")],
+            destination_bucket=htmlbucket,
+            prune=False)
 
         # Create
         # * spawner function
@@ -116,10 +129,12 @@ class ScoreboardStack(core.Stack):
         #   * allow spawner to read from boardconfig-table
         # * generator_queue
         #   allow spawner to post messages to queue
-        spawner = aws.Function(self,
+        spawner = aws.Function(
+            self,
             "spawner",
             layers=layer.layers)
-        boardconfig = aws.Table(self,
+        boardconfig = aws.Table(
+            self,
             "boardconfig",
             stream=aws_dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
             removal_policy=CONFIGDATA)
@@ -146,7 +161,6 @@ class ScoreboardStack(core.Stack):
         event_source = aws_lambda_event_sources.SqsEventSource(generator_queue, batch_size=10)
         htmlgen.add_event_source(event_source)
 
-
         # Slack API
         api = aws.RestApi(self, "slack")
 
@@ -159,44 +173,50 @@ class ScoreboardStack(core.Stack):
             lambda_layers=[layer.idlayers["bot"]])
         slack.handler.add_environment("BOT_TOKEN", read_token_from_file('slack_bot_token.txt'))
         slack.handler.add_environment("BOT_VERIFICATION", read_token_from_file('slack_verification_token.txt'))
-        #"xoxb-1033954193568-1654676166455-Vzom9aQY9NUjAYR5mhKZP70k")
+        # "xoxb-1033954193568-1654676166455-Vzom9aQY9NUjAYR5mhKZP70k")
         slack.handler.add_environment("DDB_CONFIG", boardconfig.table_name)
         slack.handler.add_environment("DDB_NAMEMAP", namemap.table_name)
         namemap.grant_read_write_data(slack.handler)
         boardconfig.grant_read_write_data(slack.handler)
 
-        spawnertarget = targets.LambdaFunction(spawner)
-        # Rule(self,
-        #     "RestOfYear",
-        #     description="Fire every week jan-nov",
-        #     rule_name="RestOfYear",
-        #     schedule=Schedule.cron(minute="0", hour="4", week_day="0", month="JAN-NOV"),
-        #     targets=[spawnertarget])
-        # Rule(self,
-        #     "Mornings_December",
-        #     description="Every second minute 06-08 (CET) 1-25 dec",
-        #     rule_name="RestOfYear",
-        #     schedule=Schedule.cron(minute="0/2", hour="6-7", day="1-25", month="DEC"),
-        #     targets=[spawnertarget])
-        # Rule(self,
-        #     "Daytime_December",
-        #     description="Every 20 minutes 08-15 (CET) 1-25 dec",
-        #     rule_name="RestOfYear",
-        #     schedule=Schedule.cron(minute="0/20", hour="8-15", day="1-25", month="DEC"),
-        #     targets=[spawnertarget])
-        # Rule(self,
-        #     "Nighttime_December",
-        #     description="Every hour 00-6,15-24 (CET) 1-25 dec",
-        #     rule_name="RestOfYear",
-        #     schedule=Schedule.cron(
-        #         minute="0",
-        #         hour="0-5,14-23",
-        #         day="1-25",
-        #         month="DEC"),
-        #     targets=[spawnertarget])
-        # Rule(self,
-        #     "EndOf_December",
-        #     description="Every hour 9-23 (CET) 25-31 dec",
-        #     rule_name="RestOfYear",
-        #     schedule=Schedule.cron(minute="0", hour="9-23", day="26-31", month="DEC"),
-        #     targets=[spawnertarget])
+        # aws.Rule(
+        #     self,
+        #     "Test",
+        #     description="Remove after functions verified - Fire every minute for some duration in Februaryx",
+        #     schedule=aws_events.Schedule.cron(minute="*", hour="*", week_day="2", month="FEB"),
+        #     target=spawner)
+
+        aws.Rule(
+            self,
+            "RestOfYear",
+            description="Fire every week jan-novx",
+            schedule=aws_events.Schedule.cron(minute="0", hour="4", week_day="2", month="JAN-NOV"),
+            target=spawner)
+        aws.Rule(
+            self,
+            "Mornings_December",
+            description="Every second minute 06-08 (CET) 1-25 decx",
+            schedule=aws_events.Schedule.cron(minute="0/2", hour="6-7", day="1-25", month="DEC"),
+            target=spawner)
+        aws.Rule(
+            self,
+            "Daytime_December",
+            description="Every 20 minutes 08-15 (CET) 1-25 decx",
+            schedule=aws_events.Schedule.cron(minute="0/20", hour="8-15", day="1-25", month="DEC"),
+            target=spawner)
+        aws.Rule(
+            self,
+            "Nighttime_December",
+            description="Every hour 00-6,14-24 (CET) 1-25 decx",
+            schedule=aws_events.Schedule.cron(
+                minute="0",
+                hour="0-6,14-23",
+                day="1-25",
+                month="DEC"),
+            target=spawner)
+        aws.Rule(
+            self,
+            "EndOf_December",
+            description="Every hour 9-23 (CET) 25-31 decx",
+            schedule=aws_events.Schedule.cron(minute="0", hour="9-23", day="26-31", month="DEC"),
+            target=spawner)

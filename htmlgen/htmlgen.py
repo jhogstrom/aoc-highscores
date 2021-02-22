@@ -27,18 +27,15 @@ logging.basicConfig(level=logging.INFO)
 
 global_scores = {}
 
-def handle_record(*,
+
+def handle_record(
+        *,
         boardid: str,
         year: str,
         namemap: dict,
         sessionid: str,
         title: str,
         uuid: str):
-    boardid = msg.get('boardid')
-    namemap = get_namemap(boardid)
-    sessionid = msg.get('sessionid')
-    title = msg.get('title')
-    year = msg.get('year')
 
     print(f"Generating html for {title} ({boardid}) -- {year}.")
     tz = pytz.timezone('America/New_York')
