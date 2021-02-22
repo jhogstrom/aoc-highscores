@@ -301,6 +301,40 @@ function restoreTab() {
   }
 }
 
+function updateTimeFetched(datakey, firstTime) {
+  const timeFetchedTextHolder = document.getElementById(`fetchtime${datakey}`);
+  if (!timeFetchedTextHolder) return;
+  const d = new Date();
+  timeFetchedTextHolder.innerText = `Retrieved from server @ ${d}`
+
+  if (!firstTime) {
+    const aocFetchedTextHolder = document.getElementById(`aocTime${datakey}`);
+    aocFetchedTextHolder.innerText += "+";
+  }
+}
+
+function fetchTableData(datakey, config, opts) {
+  console.log("loading data for ", datakey);
+
+  const widgetConfig = config[datakey];
+  const url = makeUrl(widgetConfig.dataname);
+  const api = widgetConfig.opts.api;
+  return fetch(url)
+    .then(response => response.json())
+    .then(data => api.setRowData(data))
+    .then(() => {
+      const filterInstance = api.getFilterInstance("T");
+      filterInstance.setModel({
+        filterType: 'number',
+        type: 'notEqual',
+        filter: '0'
+      });
+      api.onFilterChanged();
+      filters.push(datakey);
+    })
+    .then(() => updateTimeFetched(datakey, opts.firstTime));
+}
+
 function openTab(target, tabName, config) {
   // Hide all tabs
   const tabs = document.getElementsByClassName("tab");
@@ -333,7 +367,6 @@ function openTab(target, tabName, config) {
   };
   generated.push(datakey);
   const widgetConfig = config[datakey];
-  const url = makeUrl(widgetConfig.dataname);
 
   let widgetPromise;
   if (datatype == "table") {
@@ -341,22 +374,9 @@ function openTab(target, tabName, config) {
       document.querySelector(`#table${datakey}`),
       widgetConfig.opts);
 
-    console.log("loading data for ", datakey);
-    const api = widgetConfig.opts.api;
-    widgetPromise = fetch(url)
-      .then(response => response.json())
-      .then(data => api.setRowData(data))
-      .then(() => {
-        const filterInstance = api.getFilterInstance("T");
-        filterInstance.setModel({
-          filterType: 'number',
-          type: 'notEqual',
-          filter: '0'
-        });
-        api.onFilterChanged();
-        filters.push(datakey);
-      });
+    widgetPromise = fetchTableData(datakey, config, {firstTime: true});
   } else if (datatype == "chart") {
+    const url = makeUrl(widgetConfig.dataname);
     console.log(`${datakey} <- ${url}`);
     widgetPromise = fetch(url)
       .then(response => response.json())
@@ -403,7 +423,6 @@ function createMenu(config) {
     // var menu = document.getElementById("tabmenu");
     console.log($("#tabmenu"));
     for (const chart in charts) {
-      // console.log(charts[chart].name)
       $("#tabmenu").append(`
         <button id="btn_${chart}"
                 datakey="${chart}"
@@ -419,18 +438,20 @@ function createMenu(config) {
           <h1>${config[chart].header}</h1>
           <p>${config[chart].desc}</p>
           <div class="chart" id="chart${chart}"></div>
-          <p align="right">Data fetched on ${charts.generatedTime}.</p>
-        </div>
-        `);
-      } else {
-        $("#tables").append(`
-        <div id="section${chart}" class="w3-container w3-border tab" style="display:none; height: 100%">
+          <p align="right">Data fetched from AoC @ ${charts.generatedTime}.</p>
+          </div>
+          `);
+        } else {
+          $("#tables").append(`
+          <div id="section${chart}" class="w3-container w3-border tab" style="display:none; height: 100%">
           <p>${document.title}</p>
           <h1>${config[chart].header}</h1>
           <button id="filter${chart}" onclick="switchFilter('${chart}')">Show inactive</button>
+          <button id="refetch${chart}" onclick="fetchTableData('${chart}', charts, {firstTime: false})">Refetch</button>
           <p>${config[chart].desc}</p>
           <div id="table${chart}" style="width: auto;" class="ag-theme-alpine"></div>
-          <p align="right">Data fetched on ${charts.generatedTime}.</p>
+          <p align="right" id="aocTime${chart}">Data fetched from AoC @ ${charts.generatedTime}.</p>
+          <p align="right" id="fetchtime${chart}"/>
         </div>
         `);
       }
