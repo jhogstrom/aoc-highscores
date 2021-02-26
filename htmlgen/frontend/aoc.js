@@ -438,7 +438,8 @@ function createMenu(config) {
           <h1>${config[chart].header}</h1>
           <p>${config[chart].desc}</p>
           <div class="chart" id="chart${chart}"></div>
-          <p align="right">Data fetched from AoC @ ${charts.generatedTime}.</p>
+          <p align="right">Data fetched from AoC @ ${charts.aocFetchTime}.</p>
+          <p align="right" id="generatedTime${chart}">Data generated on server @ ${charts.generatedTime}.</p>
           </div>
           `);
         } else {
@@ -450,7 +451,8 @@ function createMenu(config) {
           <button id="refetch${chart}" onclick="fetchTableData('${chart}', charts, {firstTime: false})">Refetch</button>
           <p>${config[chart].desc}</p>
           <div id="table${chart}" style="width: auto;" class="ag-theme-alpine"></div>
-          <p align="right" id="aocTime${chart}">Data fetched from AoC @ ${charts.generatedTime}.</p>
+          <p align="right" id="aocTime${chart}">Data fetched from AoC @ ${charts.aocFetchTime}.</p>
+          <p align="right" id="generatedTime${chart}">Data generated on server @ ${charts.generatedTime}.</p>
           <p align="right" id="fetchtime${chart}"/>
         </div>
         `);
@@ -640,6 +642,25 @@ function handleParams()
   console.log("params:", year, uuid);
 }
 
+function markNoPointColumns(nopoints) {
+  console.log(two_star_coldefs)
+  console.log("no points", nopoints);
+  const nopointsColumn = params => {
+    return medalPainter(params) || {color: 'red', 'background-color': '#ffebe0'}
+  }
+  const nopointsColumn_one_star = params => {
+    return medalPainter_star2(params) || {color: 'red', 'background-color': '#ffebe0'}
+  }
+
+  for (d of nopoints) {
+    two_star_coldefs[5+(d-1)*2].cellStyle = nopointsColumn;
+    two_star_coldefs[5+(d-1)*2 + 1].cellStyle = nopointsColumn;
+    one_star_coldefs[5+(d-1)].cellStyle = nopointsColumn_one_star;
+
+  }
+}
+
+
 window.onload = function() {
   handleParams();
 
@@ -650,7 +671,9 @@ window.onload = function() {
         all_players = data["all_players"];
         medals_best_times = data["medals_best_time"];
         medals_star2 = data["medals_star2"];
-        charts.generatedTime = data.extravars.generated
+        charts.aocFetchTime = data.extravars.aoc_fetch;
+        charts.generatedTime = data.extravars.generated;
+        markNoPointColumns(data.extravars.nopoints);
       })
     .then(() => {
         createMenu(charts);

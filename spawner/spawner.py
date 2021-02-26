@@ -4,11 +4,37 @@ import json
 import logging
 import datetime
 import pytz
+from typing import Dict
 
-# logging.basicConfig(level=logging.DEBUG)
+DEFAULT_LOGLEVEL = logging.DEBUG
+debuglevel = os.environ.get("debug", "")
+debuglevels: Dict[str, int] = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR}
+debuglevel = debuglevels.get(debuglevel.upper(), DEFAULT_LOGLEVEL)
+
+
+logger = logging.getLogger("aoc")
+logger.setLevel(debuglevel)
+formats: Dict[int, str] = {
+    logging.DEBUG: '%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
+    logging.INFO: '%(asctime)s.%(msecs)03d - %(message)s'
+}
+
+formatter = logging.Formatter(
+    formats.get(debuglevel, '%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s'),
+    datefmt="%Y-%m-%d %H:%M:%S")
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 config_table_name = os.environ.get("DDB_CONFIG", "scoreboard-boardconfig")
 config_table = boto3.resource('dynamodb').Table(config_table_name)
+
+nopoint_days_table_name = os.environ.get("DDB_NOPOINTDAYS", "scoreboard-nopointdays")
+nopoint_days_table = boto3.resource('dynamodb').Table(nopoint_days_table_name)
 
 timestamps_table_name = os.environ.get("DDB_TIMESTAMPS", "scoreboard-timestamps")
 timestamps_table = boto3.resource('dynamodb').Table(timestamps_table_name)
@@ -61,6 +87,10 @@ def get_timestamps() -> dict:
     return result
 
 
+def get_nopoint_days() -> dict:
+    return {item['id']: list(map(int, item['no_points'])) for item in scan_table(nopoint_days_table)}
+
+
 def should_send_message(
         last_timestamp: int,
         msg: dict) -> bool:
@@ -103,14 +133,16 @@ def should_send_message(
     else:
         cool_off = datetime.timedelta(minutes=2)
 
-    logging.debug(f"{msg['year']}|{msg['boardid']}: last_time: {last_time} age: {age}, cool_off: {cool_off}. Regenerate: {age > cool_off}")
+    # cool_off = datetime.timedelta(minutes=2)
+
+    logger.debug(f"{msg['year']}|{msg['boardid']}: last_time: {last_time} age: {age}, cool_off: {cool_off}. Regenerate: {age > cool_off}")  # noqa e501
 
     return age.total_seconds() > cool_off.total_seconds()
 
 
 def generate_messages():
     timestamps = get_timestamps()
-    print(timestamps)
+    nopoint_days = get_nopoint_days()
     messages = []
 
     # read all records from config_table
@@ -118,7 +150,7 @@ def generate_messages():
     for item in scan_table(config_table):
         config = item.get('config')
         if config is None:
-            logging.warning(f'Missing config: {item}')
+            logger.warning(f'Missing config: {item}')
             continue
 
         for year in config['years']:
@@ -128,10 +160,9 @@ def generate_messages():
                 'title': config['title'],
                 'year': year,
                 'uuid': config.get('uuid', config['boardid']),
-                'last_timestamp': int(timestamps.get(f"{year}|{config['boardid']}", -1))
+                'last_timestamp': int(timestamps.get(f"{year}|{config['boardid']}", -1)),
+                'nopoint_days': nopoint_days.get(year, [])
             }
-            print("key", f"{year}|{config['boardid']}")
-            print(msg)
 
             if should_send_message(msg['last_timestamp'], msg):
                 messages.append(sqs_message(msg))
@@ -143,7 +174,7 @@ def generate_messages():
 
 def main(event, context):
     n = generate_messages()
-    logging.info(f'Sent {n} messages.')
+    logger.info(f'Sent {n} messages.')
 
 
 if __name__ == "__main__":

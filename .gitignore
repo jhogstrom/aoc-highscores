@@ -12,3 +12,7 @@ boards.json
 # Tokens for Slack
 slack_bot_token.txt
 slack_verification_token.txt
+
+# Files that just lay around...
+htmlgen/timer.html
+package.json

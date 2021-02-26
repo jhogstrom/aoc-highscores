@@ -6,7 +6,7 @@ import boto3
 import hashlib
 import datetime
 import math
-from typing import Dict
+from typing import Dict, List
 from jsextractor import jsextractor
 from botocore.exceptions import ClientError
 import concurrent.futures
@@ -119,7 +119,8 @@ def generatelist(
         sessionid: str,
         title: str,
         uuid: str,
-        global_scores: dict):
+        global_scores: dict,
+        nopoint_days: List[int]):
     highest_day = get_highest_day(int(year))
     logger.info(f"Reading data for {title}/{year} -> day {highest_day}")
     scoredict, generation_date = get_scores(year, sessionid, boardid)
@@ -130,13 +131,17 @@ def generatelist(
         highestday=highest_day,
         namemap=namemap,
         uuid=uuid,
-        global_scores=global_scores)
+        global_scores=global_scores,
+        nopoint_days=nopoint_days)
     # leaderboard.update_global_scores()
     leaderboard.post_process_stats()
     logger.info(f"Generated data for {leaderboard.title}-{leaderboard.year}")
     extravars = {
-        "generated": f"{generation_date.strftime('%Y-%m-%d %H:%M:%S')} [{generation_date.tzname()}]"
+        "aoc_fetch": f"{generation_date.strftime('%Y-%m-%d %H:%M:%S')} [{generation_date.tzname()}]",
+        "generated": f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "nopoints": nopoint_days
     }
+    print(nopoint_days)
 
     jse = jsextractor(leaderboard, extravars)
     generation_params = {
@@ -180,4 +185,5 @@ if __name__ == "__main__":
                 boardid=boardid,
                 namemap=namemap.get(c['boardid'], {}),
                 uuid=uuid,
-                global_scores={'names': []})
+                global_scores={'names': []},
+                nopoint_days=[1, 2, 3])

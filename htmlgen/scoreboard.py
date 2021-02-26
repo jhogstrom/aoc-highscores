@@ -1,6 +1,8 @@
 import datetime
 import logging
 import scores
+from typing import List
+
 
 logger = logging.getLogger("aoc")
 
@@ -65,14 +67,14 @@ class PlayerDay(BaseObj):
             self.timetocompletestar2 = None
 
     def __str__(self):
-        return " - ".join([str(_) for _ in self.stars]) + f" ({self.timetocompletestar2} -- {astime(self.timetocompletestar2)})"
+        return " - ".join([str(_) for _ in self.stars]) + f" ({self.timetocompletestar2} -- {astime(self.timetocompletestar2)})"  # noqa e501
 
     def __getitem__(self, index):
         return self.stars[index]
 
     @property
     def starcount(self) -> int:
-        return sum([_.starcount for _ in self.stars])#self.star1.starcount + self.star2.starcount
+        return sum([_.starcount for _ in self.stars])
 
 
 class Player(BaseObj):
@@ -129,19 +131,21 @@ class BoardStar():
 
     @besttime.setter
     def besttime(self, value):
-        if self._besttime == None or value < self._besttime:
+        if self._besttime is None or value < self._besttime:
             self._besttime = value
 
 
 class LeaderBoard(BaseObj):
-    def __init__(self, *,
+    def __init__(
+            self, *,
             title: str,
             score: dict,
             year: str,
             highestday: int,
             namemap: dict,
             uuid=str,
-            global_scores: dict):
+            global_scores: dict,
+            nopoint_days: List[int]):
         self.year = year
         self.title = title
         self.score = score
@@ -149,6 +153,7 @@ class LeaderBoard(BaseObj):
         self.players = [Player(_, daycount=highestday, leaderboard=self) for _ in score['members'].values()]
         self.global_scores = global_scores
         self.uuid = uuid
+        self.nopoint_days = nopoint_days
 
         if namemap:
             for p in [_ for _ in self.players if _.name in namemap]:
@@ -171,15 +176,13 @@ class LeaderBoard(BaseObj):
 
     @property
     def ordered_players(self):
-        return sorted(self.players,
+        return sorted(
+            self.players,
             key=lambda x: (x.localscore, x.laststar, x.id),
             reverse=True)
 
     def day_excluded(self, day):
-        # Fix this up later!
-        # day 5 year 2018 is excluded,
-        # but it makes sense to read this from somewhere.
-        return day == 1
+        return day in self.nopoint_days
 
     def update_global_scores(self):
         logger.info("Updating global scores")
@@ -204,7 +207,7 @@ class LeaderBoard(BaseObj):
         else:
             player_count = len(self.players)
 
-        laststar = {p:0 for p in self.players}
+        laststar = {p: 0 for p in self.players}
 
         for day in range(1, self.highestday + 1):
             publish_time = int(datetime.datetime(year=int(self.year), month=12, day=day, hour=6).timestamp())
@@ -223,16 +226,19 @@ class LeaderBoard(BaseObj):
             # Now loop again and resolve board offsets etc
             # for day in range(1, self.highestday + 1):
             for star in range(2):
-                ordered_players = sorted([_ for _ in self.players if _[day][star].completed],
+                ordered_players = sorted(
+                    [_ for _ in self.players if _[day][star].completed],
                     key=lambda x: (x[day][star].completiontime, laststar.get(x, 0)))
 
-                for player in sorted(self.players,
+                for player in sorted(
+                    self.players,
                         key=lambda x: (x[day][star].completiontime or -1, laststar.get(x, 0))):
                     thestar = player[day][star]
                     if thestar.completed:
                         index = ordered_players.index(player)
 
-                        # Handle ties by setting index to the same as the player just ahead with the same completion time.
+                        # Handle ties by setting index to the same as
+                        # the player just ahead with the same completion time.
                         if index > 0 and thestar.completiontime == ordered_players[index-1][day][star].completiontime:
                             index = ordered_players[index-1][day][star].position - 1
                         thestar.position = index + 1
@@ -256,7 +262,8 @@ class LeaderBoard(BaseObj):
                     player.localscore = player.totalscore
 
             for star in range(2):
-                ordered_players = sorted([_ for _ in self.players if _[day][star].accumulatedscore > 0],
+                ordered_players = sorted(
+                    [_ for _ in self.players if _[day][star].accumulatedscore > 0],
                     key=lambda x: x[day][star].accumulatedscore,
                     reverse=True)
                 for player in self.players:
@@ -265,12 +272,13 @@ class LeaderBoard(BaseObj):
                     else:
                         index = -1
                     # Handle ties
-                    if index > 0 and player[day][star].accumulatedscore == ordered_players[index-1][day][star].accumulatedscore:
+                    if index > 0 and player[day][star].accumulatedscore == ordered_players[index-1][day][star].accumulatedscore:  # noqa e501
                         player[day][star].accumulatedposition = ordered_players[index-1][day][star].accumulatedposition
                     else:
                         player[day][star].accumulatedposition = index
 
-        ordered_players = sorted([_ for _ in self.players],
+        ordered_players = sorted(
+            [_ for _ in self.players],
             key=lambda x: x[day][star].accumulatedscore,
             reverse=True)
         for i, player in enumerate(ordered_players):
@@ -280,13 +288,14 @@ class LeaderBoard(BaseObj):
         #     print(f"{p.name:<20} - {p[day][star].completiontime} - {p.totalscore}")
 
         for day in range(1, self.highestday+1):
-            players = sorted([_ for _ in self.players if _[day].starcount == 2],
+            players = sorted(
+                [_ for _ in self.players if _[day].starcount == 2],
                 key=lambda x: x[day].timetocompletestar2)
             for i, player in enumerate(players):
                 player[day].star2pos = i+1
                 if i > 0 and player[day].timetocompletestar2 == players[i-1][day].timetocompletestar2:
                     player[day].star2pos = i
-            for player in [_ for _ in self.players if  _[day].starcount != 2]:
+            for player in [_ for _ in self.players if _[day].starcount != 2]:
                 player[day].star2pos = len(self.players)+1
 
     def leaderboard_data(self):
@@ -298,7 +307,6 @@ class LeaderBoard(BaseObj):
                     player_data.append(p[d][star].position if p[d][star].position else -1)
             res.append(player_data)
         return res
-
 
 
 class GlobalListRepresentation(scores.DataRepresentation):
@@ -329,6 +337,5 @@ class ScoreboardRepresentation(scores.DataRepresentation):
 
 
 if __name__ == "__main__":
-    import aocgen
+    import aocgen  # noqa F401
     raise Exception("This is just a module!")
-

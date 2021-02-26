@@ -6,6 +6,7 @@ import aocgen
 import logging
 import datetime
 import pytz
+from typing import List
 
 namemap_table_name = os.environ.get("DDB_NAMEMAP", "scoreboard-namemap")
 namemap_table = boto3.resource('dynamodb').Table(namemap_table_name)
@@ -35,7 +36,8 @@ def handle_record(
         namemap: dict,
         sessionid: str,
         title: str,
-        uuid: str):
+        uuid: str,
+        nopoint_days: List[int]):
 
     print(f"Generating html for {title} ({boardid}) -- {year}.")
     tz = pytz.timezone('America/New_York')
@@ -52,7 +54,8 @@ def handle_record(
         sessionid=sessionid,
         title=title,
         uuid=uuid,
-        global_scores=global_scores[year])
+        global_scores=global_scores[year],
+        nopoint_days=nopoint_days)
 
 
 def get_namemap(boardid: str) -> dict:
@@ -97,7 +100,8 @@ def process_messages(messages):
                 namemap=get_namemap(msg['boardid']),
                 sessionid=msg['sessionid'],
                 title=msg['title'],
-                uuid=msg['uuid'])
+                uuid=msg['uuid'],
+                nopoint_days=msg.get('nopoint_days', []))
         except Exception as e:
             logging.exception(e)
 
@@ -105,7 +109,7 @@ def process_messages(messages):
 def main(event, context):
     try:
         messages = event.get('Records', [])
-        print(messages)
+        # print(messages)
         process_messages(messages)
     except Exception as e:
         logging.exception(e)
@@ -117,8 +121,8 @@ if __name__ == "__main__":
             'Records': [
                 {
                     'messageId': 'c4a35f21-8ff4-4d28-8fb5-5be7cc73e3cf',
-                    'receiptHandle': 'AQEBJfl0cnboalgoOsa1IstXAhAcltbpohFQI4q2mF3wiIo9fJMnG6Z0AOMaf/eXEm58cKWGDtT5YCD4SR20X5lpjP0CsMsO8XoK3QKvm/go9Ojp8osoe0OJHr513UDMvQCq6/K3FgSg0P17ZOps48mTvjpeCD750jtQh3rhII2ICK9WFWW9WGWIraeMqvPaY+BkTo2lJnOpWx90NI2MhO1Vqw6iSIx/N4VZyk+lWnzfce9Yf/qcvJmvLwhCADgP4J0LLjsi6BK4XGlHGTx/Ys/4WkF5BaLOQRn19cD5tg3NTDlEfCmgquhmJXm6a7hxlQx+SN+PSVe0UZoV0PzL/haZIs/jSd7O9VrG1F8HkchdHR5bmHlxNdAKV/wBA12GfZtq21OwF6GlITk58ICtGZYjow==',
-                    'body': '{"boardid": "34481", "sessionid": "53616c7465645f5f538e95e0d6938f92cb62df52473d36ce5e269046fd7d5eeaccd579aec170a66b1eec0f1eacfbdcfa", "title": "Leica foo bar fighters", "year": "2020", "uuid": "21ae6a02-ec22-469e-ae39-c63e921b309b"}',
+                    'receiptHandle': 'AQEBJfl0cnboalgoOsa1IstXAhAcltbpohFQI4q2mF3wiIo9fJMnG6Z0AOMaf/eXEm58cKWGDtT5YCD4SR20X5lpjP0CsMsO8XoK3QKvm/go9Ojp8osoe0OJHr513UDMvQCq6/K3FgSg0P17ZOps48mTvjpeCD750jtQh3rhII2ICK9WFWW9WGWIraeMqvPaY+BkTo2lJnOpWx90NI2MhO1Vqw6iSIx/N4VZyk+lWnzfce9Yf/qcvJmvLwhCADgP4J0LLjsi6BK4XGlHGTx/Ys/4WkF5BaLOQRn19cD5tg3NTDlEfCmgquhmJXm6a7hxlQx+SN+PSVe0UZoV0PzL/haZIs/jSd7O9VrG1F8HkchdHR5bmHlxNdAKV/wBA12GfZtq21OwF6GlITk58ICtGZYjow==',  # noqa e501
+                    'body': '{"boardid": "34481", "sessionid": "53616c7465645f5f538e95e0d6938f92cb62df52473d36ce5e269046fd7d5eeaccd579aec170a66b1eec0f1eacfbdcfa", "title": "Leica foo bar fighters", "year": "2020", "uuid": "21ae6a02-ec22-469e-ae39-c63e921b309b"}',  # noqa e501
                     'attributes': {
                         'ApproximateReceiveCount': '1',
                         'SentTimestamp': '1611374547103',

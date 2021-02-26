@@ -64,6 +64,10 @@ class ScoreboardStack(core.Stack):
             removal_policy=CONFIGDATA)
         namemap.grant_read_data(htmlgen)
 
+        no_point_days = aws.Table(
+            self,
+            "nopointdays")
+
         # id: str (boardid), day: int, results_1: dict ({player: score, ...}), results_2: dict ({player: score, ...})
         globalscores = aws.Table(
             self,
@@ -102,7 +106,7 @@ class ScoreboardStack(core.Stack):
             auto_delete_objects=True,
             block_public_access=None,
             website_error_document="error.html",
-            website_index_document="index.html",
+            website_index_document="scoreboard.html",
             cors=[aws_s3.CorsRule(
                 allowed_methods=[aws_s3.HttpMethods.GET],
                 allowed_headers=["*"],
@@ -140,6 +144,7 @@ class ScoreboardStack(core.Stack):
             removal_policy=CONFIGDATA)
         boardconfig.grant_read_data(spawner)
         spawner.add_environment("DDB_CONFIG", boardconfig.table_name)
+        spawner.add_environment("DDB_NOPOINTDAYS", no_point_days.table_name)
 
         boardconfig_source = aws_lambda_event_sources.DynamoEventSource(
             boardconfig,

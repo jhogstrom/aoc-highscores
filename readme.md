@@ -9,8 +9,6 @@ Big
 
 Small
 --
-* Figure out how to show blocked days
-* Move blocked days to database?
 * Fix bugs in leaderboard (see year 2019)
 * Add a generated page with links to all boards (preferably cognito-protected)
 * Adjust cron jobs UTC -> EST
@@ -18,11 +16,16 @@ Small
 * Handle fetch errors (expired sessionid) by mailing list owner
 * Add DLQ for failures
 * Reconsider S3 datacache-bucket. Most data is stored in Dynamo anyway...
+* Reconsider all the refetch rules. Cron jobs should be enough, after that
+  it's enough to wait 2-15 minutes after refreshing from AoC.
 * Build dashboard+alarms in CDK
+* Add links to other years for the same scoreboardid.
+* ~~Figure out how to show blocked days~~
+* ~~Move blocked days to database?~~
 * ~~Add cronjob to regenerate files~~
-* ~~Subscribe to dyndb deletions of boardtable and clean up
-  - S3-files
-  - name maps~~
+* ~~Subscribe to dyndb deletions of boardtable and clean up~~
+  - ~~S3-files~~
+  - ~~name maps~~
 * ~~Add GUID to boards~~
 * ~~Use guid instead of boardID for generated files~~
 * ~~Generate files into \<year>\\\<guid>\\\<file> in S3~~
