@@ -1,0 +1,141 @@
+<html>
+    <head>
+        <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-grid.css">
+        <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-theme-alpine.css">
+    </head>
+    <script>
+var editedBoards = {};
+
+function loadData(api) {
+    fetch(makeUrl('list/boards'))
+        .then(response => response.json())
+        .then(data => api.setRowData(data))
+        .catch(data => console.log(data));
+}
+
+function save(api) {
+    const body = {boards: []}
+    Object.keys(editedBoards).forEach(key => body.boards.push(editedBoards[key]))
+    fetch(makeUrl('/update/boards'),
+        {
+            method: 'POST',
+            mode: "no-cors",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        })
+    .then(() => loadData(api));
+    const saveButton = document.getElementById("saveButton");
+    saveButton.style.color = "#000000";
+    editedBoards = {};
+}
+
+function add(api) {
+    var boardId = parseInt(prompt("Id of new board", "")).toString();
+    if (boardId != NaN && boardId > 0) {
+        fetch(makeUrl('/add/board'),
+        {
+            method: 'POST',
+            mode: "no-cors",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id: boardId})
+        })
+        .then(() => loadData(api));
+    }
+}
+
+
+function makeLinks(params) {
+    let s = '';
+    for (d of params.value)
+    {
+        s += `<a href="https://scoreboard-html.s3.us-east-2.amazonaws.com/scoreboard.html?year=${d}&uuid=${params.data.uuid}">${d}</a>&nbsp;`;
+    }
+    return s;
+}
+
+const columnDefs = [
+    {
+        field: "title",
+        resizable: true,
+        editable: true,
+    },
+    {
+        field: "boardid",
+        resizable: true,
+        width: 90,
+        editable: false,
+    },
+    {
+        field: "years",
+        width: 170,
+        resizable: true,
+        cellRenderer: makeLinks,
+        editable: true,
+        valueParser: yearParser
+    },
+    {
+        field: "owner",
+        resizable: true,
+        editable: true,
+    },
+    {
+        field: "sessionid",
+        resizable: true,
+        editable: true,
+    },
+    {
+        field: "uuid",
+        resizable: true,
+        editable: false,
+    },
+];
+
+function yearParser(params) {
+    if (params.newValue == params.oldValue) {
+        return params.oldValue;
+    }
+    res = [];
+    for (year of params.newValue.split(",")) {
+        y = parseInt(year.trim()).toString();
+        if (y > 2015 && y < 2030) {
+            res.push(y);
+        }
+    }
+    return res;
+}
+
+function editingStopped(params) {
+    const boardId = params.data.boardid;
+    editedBoards[boardId] = params.data;
+    const saveButton = document.getElementById("saveButton");
+    saveButton.style.color = "#FF0000";
+}
+
+const gridOptions = {
+    columnDefs: columnDefs,
+    stopEditingWhenGridLosesFocus: true,
+    editType: 'fullRow',
+    onRowEditingStopped: editingStopped,
+}
+
+function makeUrl(path) {
+    const rooturl = "https://8zmxnhag1k.execute-api.us-east-2.amazonaws.com/prod";
+    return `${rooturl}/${path}`;
+}
+
+
+window.onload = function() {
+    div = document.getElementById("tables");
+    grid = new agGrid.Grid(
+        document.getElementById("tables"),
+        gridOptions);
+    loadData(gridOptions.api);
+}
+    </script>
+    <body>
+        <button id="saveButton" onclick="save(gridOptions.api)">Save</button>
+        <button id="addButton" onclick="add(gridOptions.api)">Add</button>
+        <div id="tables" class="ag-theme-alpine"/>
+    </body>
+</html>

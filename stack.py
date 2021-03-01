@@ -1,5 +1,6 @@
 from aws_cdk import (
     core,
+    aws_apigateway,
     aws_lambda_event_sources,
     aws_dynamodb,
     aws_s3,
@@ -165,6 +166,16 @@ class ScoreboardStack(core.Stack):
         # Connect the generator_queue to the htmlgen-function
         event_source = aws_lambda_event_sources.SqsEventSource(generator_queue, batch_size=10)
         htmlgen.add_event_source(event_source)
+
+        # Admin API
+        adminhandler = aws.Function(self, "adminhandler")
+        adminhandlerApi = aws_apigateway.LambdaRestApi(
+            self,
+            "adminapi",
+            handler=adminhandler)
+        core.CfnOutput(self, "root_url", value=f"Admin URL={adminhandlerApi.url_for_path()}")
+        adminhandler.add_environment("DDB_CONFIG", boardconfig.table_name)
+        boardconfig.grant_read_write_data(adminhandler)
 
         # Slack API
         api = aws.RestApi(self, "slack")
