@@ -1,21 +1,18 @@
 import json
 import re
 import logging
-import datetime
 from collections import defaultdict
-
 from scoreboard import LeaderBoard
 
 logger = logging.getLogger("aoc")
 
 
 class jsextractor():
-    def __init__(self, board, extravars: dict):
+    def __init__(self, board: LeaderBoard, extravars: dict):
         self.indent = {}
         # self.indent = {"indent": 3}
         self.board = board
         self.extravars = extravars
-
 
     def _make_return_value(self, data, *, make_tokens: bool = False) -> str:
         """
@@ -118,14 +115,14 @@ class jsextractor():
         return self._make_return_value(data)
 
     def common_columns(self, pos, p) -> dict:
-      pad = self.get_padding(len(self.board.ordered_players))
-      return {
-              "name": f"{pos:>{pad}}. {p.name}",
-              "T": p.totalscore,
-              "G": p.globalscore,
-              "S": p.stars,
-              "Tob": p.accumulatedtobiiscoretotal
-            }
+        pad = self.get_padding(len(self.board.ordered_players))
+        return {
+                "name": f"{pos:>{pad}}. {p.name}",
+                "T": p.totalscore,
+                "G": p.globalscore,
+                "S": p.stars,
+                "Tob": p.accumulatedtobiiscoretotal
+                }
 
     def common_coldefs(self) -> list:
         width = 60
@@ -138,29 +135,29 @@ class jsextractor():
         ]
 
     def score_diff(self) -> str:
-      data = []
-      for i, p in enumerate(self.board.ordered_players, start=1):
-          player_data = self.common_columns(i, p)
-          for d in range(1, self.board.highestday+1):
-              for star in range(2):
-                  player_data[f"d{d}_{star}"] = self.board.days[d][star].topscore - p[d][star].accumulatedscore
-          data.append(player_data)
+        data = []
+        for i, p in enumerate(self.board.ordered_players, start=1):
+            player_data = self.common_columns(i, p)
+            for d in range(1, self.board.highestday+1):
+                for star in range(2):
+                    player_data[f"d{d}_{star}"] = self.board.days[d][star].topscore - p[d][star].accumulatedscore
+            data.append(player_data)
 
-      return self._make_return_value(data)
+        return self._make_return_value(data)
 
     def generate_two_star_data(self, *, starextractor) -> str:
-      data = []
-      for i, p in enumerate(self.board.ordered_players, start=1):
-          player_data = self.common_columns(i, p)
-          for d in range(1, self.board.highestday+1):
-              for star in range(2):
-                  player_data[f"d{d}_{star}"] = starextractor(p[d][star])
-          data.append(player_data)
+        data = []
+        for i, p in enumerate(self.board.ordered_players, start=1):
+            player_data = self.common_columns(i, p)
+            for d in range(1, self.board.highestday+1):
+                for star in range(2):
+                    player_data[f"d{d}_{star}"] = starextractor(p[d][star])
+            data.append(player_data)
 
-      return self._make_return_value(data)
+        return self._make_return_value(data)
 
     def accumulated_position(self) -> str:
-      return self.generate_two_star_data(starextractor=lambda star: star.accumulatedposition + 1)
+        return self.generate_two_star_data(starextractor=lambda star: star.accumulatedposition + 1)
 
     def daily_position(self) -> str:
         return self.generate_two_star_data(starextractor=lambda star: star.position)

@@ -24,9 +24,11 @@ def read_token_from_file(filename: str):
     with open(filename) as f:
         return f.readline().strip()
 
+
 bot_token = os.environ.get("BOT_TOKEN", read_token_from_file('slack_bot_token.txt'))
 verification_token = os.environ.get("BOT_VERIFICATION", read_token_from_file('slack_verification_token.txt'))
 previous_events = []
+
 
 def scan_table(table, **scan_kwargs):
     done = False
@@ -89,7 +91,7 @@ def add_board(boardid: str, sessionid: str, title) -> str:
 
     year = str(datetime.date.today().year)
     title = " ".join(title)
-    uuid = str(uuid.uuid1())
+    board_uuid = str(uuid.uuid1())
 
     item = {
         'id': boardid,
@@ -98,7 +100,7 @@ def add_board(boardid: str, sessionid: str, title) -> str:
             'sessionid': sessionid,
             'title': title,
             'years': [year],
-            'uuid': uuid
+            'uuid': board_uuid
         }
     }
     config_table.put_item(Item=item)
@@ -125,7 +127,7 @@ def extend_board(boardid: str, year: str) -> str:
 
 def process_command(command: str) -> str:
     def help_text(cmd):
-        return f'''
+        return '''
 Valid commands:
 * list boards
 * list namemaps [<boardid>]
@@ -133,6 +135,7 @@ Valid commands:
 * add namemap <boardid> <name> <map>
 * extend board <boardid> <year>
 '''
+
     def get_part(parts, ix: int) -> str:
         if ix < len(parts):
             return parts[ix]
@@ -187,6 +190,7 @@ def respond_to_im(channel_id: str, response: str) -> None:
     from_request = request.urlopen(req).read()
     logging.debug(f"Request returned: {from_request}.")
 
+
 def respond_to_command(response_url: str, response: str) -> None:
     headers = {"Content-Type": "application/json"}
     data = {
@@ -223,11 +227,10 @@ def main(event, context):
             'body': event["challenge"]
         }
 
-
     if content_type == 'application/json':
         logging.info("direct message")
         body = json.loads(event.get("body", "{}"))
-        loggin.debug(f"Body: {body}")
+        logging.debug(f"Body: {body}")
 
         challenge_answer = body.get("challenge", "NOT FOUND")
 
@@ -236,7 +239,7 @@ def main(event, context):
             return "200 OK"
 
         if not verify_token(body.get('token')):
-            logging.info(f"Message dropped. Wrong verification token. Exp: {verification_token} got {body.get('token')}")
+            logging.info(f"Message dropped. Wrong verification token. Exp: {verification_token} got {body.get('token')}")  # noqa e501
             return "200 OK"
 
         channel_id = body.get('event', {}).get('channel')
@@ -255,16 +258,17 @@ def main(event, context):
         # respond_to_command(body.get('response_url'), response)
         respond_to_im(channel_id, response)
         return {
-            'headers': { "Content-Type": "application/json" },
+            'headers': {"Content-Type": "application/json"},
             'body': json.dumps(
                 {
-                    'text': f"Hope that helped!",
+                    'text': "Hope that helped!",
                 }),
         }
     else:
         logging.warning(f"Unknown content-type: {content_type}.")
 
     return "200 OK"
+
 
 if __name__ == "__main__":
     s = "token=KvH8HaKiV9qmNEnqHULDVFUm&team_id=T010ZU25PGQ&team_domain=salgs&channel_id=D01KPK9BQ2X&channel_name=directmessage&user_id=U010ZSN6QER&user_name=jspr.hgstrm&command=%2Flist&text=boards&api_app_id=A01KNCASSFL&is_enterprise_install=false&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT010ZU25PGQ%2F1682512109745%2FGFkXkB7v3dxbHs8klVN2IGij&trigger_id=1663106876214.1033954193568.6ca8825c33af40aee1058cc4a0c99c2a"
@@ -279,6 +283,6 @@ if __name__ == "__main__":
             'event':
             {
                 "text": "add namemap 34481 jhm jesper högström",
-                "channel":"D01KPK9BQ2X",
+                "channel": "D01KPK9BQ2X",
             }
         })

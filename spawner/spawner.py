@@ -54,9 +54,9 @@ def sqs_message(msg: dict) -> dict:
         dict: A message to send to SQS
     """
     return {
-            'Id': f"{msg['boardid']}-{msg['year']}",
-            'MessageBody': json.dumps(msg)
-        }
+        'Id': f"{msg['boardid']}-{msg['year']}",
+        'MessageBody': json.dumps(msg)
+    }
 
 
 def scan_table(table, **scan_kwargs):
@@ -79,7 +79,7 @@ def get_timestamps() -> dict:
     return in map(<year|boardid> -> timestamp)
 
     Returns:
-        dict: Disctionary mapping <year>|<boardid> -> timestamp
+        dict: Dictionary mapping <year>|<boardid> -> timestamp
     """
     result = {}
     for item in scan_table(timestamps_table):

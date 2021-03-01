@@ -45,78 +45,76 @@ function makeUrl(s) {
 }
 
 function oneStarHeaders() {
-  result = [];
+  const result = [];
   for (let i = 1; i <= maxDays(); i++)
   {
     result.push({
-      "headerName": `${i}/*->**`,
-      "headerTooltip": `Dec ${i} *->**`,
-      "field": `d${i}`});
+      headerName: `${i}/*->**`,
+      headerTooltip: `Dec ${i} *->**`,
+      field: `d${i}`});
   }
   return result;
 }
 
 function twoStarHeaders() {
-  result = [];
+  const result = [];
   for (let day = 1; day <= maxDays(); day++)
   {
     for (let star = 0; star < 2; star++)
     result.push({
-      "headerName": `${day}/${star+1}`,
-      "headerTooltip": `Dec ${day} *${star+1}`,
-      "field": `d${day}_${star}`});
+      headerName: `${day}/${star+1}`,
+      headerTooltip: `Dec ${day} *${star+1}`,
+      field: `d${day}_${star}`});
   }
   return result;
 }
 
 const default_coldefs_two_stars = {
-  "sortable": true,
-  "width": 70,
-  "comparator": comparator,
-  "cellStyle": medalPainter,
-  "type": "numericColumn"};
+  sortable: true,
+  width: 70,
+  comparator: comparator,
+  cellStyle: medalPainter,
+  type: "numericColumn"};
 
 const default_coldefs_two_stars_time = {
-  "sortable": true,
-  "width": 120,
-  "comparator": comparator,
-  "cellStyle": medalPainter,
-  "type": "numericColumn",
-  "valueFormatter": timedelta_to_string};
+  sortable: true,
+  width: 120,
+  comparator: comparator,
+  cellStyle: medalPainter,
+  type: "numericColumn",
+  valueFormatter: timedelta_to_string};
 
 const default_coldefs_one_stars_time = {
-  "sortable": true,
-  "width": 120,
-  "comparator": comparator,
-  "cellStyle": medalPainter_star2,
-  "type": "numericColumn",
-  "valueFormatter": timedelta_to_string};
+  sortable: true,
+  width: 120,
+  comparator: comparator,
+  cellStyle: medalPainter_star2,
+  type: "numericColumn",
+  valueFormatter: timedelta_to_string};
 
 const coldefs_default = [
   {
-    "field": "name",
-    "resizable": true,
-    "pinned": "left",
-    "width": 200
+    field: "name",
+    resizable: true,
+    pinned: "left",
+    width: 200
   },
   {
-    "field": "T",
-    "width": 70,
-    "headerTooltip": "Total score"
+    field: "T",
+    width: 70,
+    headerTooltip: "Total score"
   },
   {
-    "field": "G",
-    "headerTooltip":
-    "Global score"
+    field: "G",
+    headerTooltip: "Global score"
   },
   {
-    "field": "S",
-    "headerTooltip": "# stars (problems solved)"
+    field: "S",
+    headerTooltip: "# stars (problems solved)"
   },
   {
-    "field": "Tob",
-    "headerTooltip":
-    "Tobii score"
+    field: "Tob",
+    headerTooltip: "Tobii score"
   }
 ];
 
@@ -127,16 +125,17 @@ function globalResults(datakey, config) {
   const grid = config[datakey].opts.api;
   const playersWithGlobalScore = [];
 
+  // eslint-disable-next-line no-unused-vars
   grid.forEachNode(function(node, index) {
     const data = node.data;
     for (let i = 0; i < data.length; i++) {
       let keys = Object.keys(data[i]);
       for (let j = 5; j < keys.length; j++) {
-        key = keys[j]
+        const key = keys[j]
         if (data[i][key] > 0) {
           console.log(data[i].name);
           playersWithGlobalScore.push(data[i].name.split(".")[1] + "(" + key + ")");
-        };
+        }
       }
     }
   });
@@ -159,7 +158,7 @@ function fillData(rows) {
     }
     data.addRows(rows);
     return data;
-};
+}
 
 function drawChart(elementId, rows, opts) {
     const options = {
@@ -218,9 +217,9 @@ function astime(data) {
 
     if (days != "00") {
         return `${days}.${hours}:${minutes}:${seconds}`;
-    };
+    }
     return `${hours}:${minutes}:${seconds}`;
-};
+}
 
 function getColumnIndex(params) {
   const colId = params.column.colId;
@@ -238,7 +237,7 @@ function timedelta_to_string(params) {
         return params.value;
     }
     return astime(params.value);
-};
+}
 
 function medalPainter(params) {
     var id = params.column.colId;
@@ -249,7 +248,7 @@ function medalPainter(params) {
     const star = parseInt(id[1]);
     const col = day*2 + star;
     return stylePosMedals(player-1, col, medals_best_times);
-};
+}
 
 function medalPainter_star2(params) {
     const  id = params.column.colId;
@@ -257,7 +256,7 @@ function medalPainter_star2(params) {
 
     const player = parseInt(params.data.name.split(".")[0].trim());
     return stylePosMedals(player-1, day, medals_star2);
-};
+}
 
 function getSortColumn(columns) {
   for (let i = 0; i < columns.length; i++) {
@@ -274,6 +273,7 @@ function sortString(s1, s2) {
   return (s1 > s2) ? 1 : -1;
 }
 
+// eslint-disable-next-line no-unused-vars
 function comparator(valueA, valueB, nodeA, nodeB, isInverted) {
   const colIndex = getSortColumn(nodeA.columnApi.getColumnState());
 
@@ -364,7 +364,8 @@ function openTab(target, tabName, config) {
   if (generated.includes(datakey)) {
     console.log("Using pregenerated widget")
     return;
-  };
+  }
+
   generated.push(datakey);
   const widgetConfig = config[datakey];
 
@@ -390,7 +391,7 @@ function openTab(target, tabName, config) {
   if (widgetPromise && widgetConfig.configFunction) {
     widgetPromise.then(() => widgetConfig.configFunction(datakey, config));
   }
-};
+}
 
 var filters = [];
 
@@ -398,16 +399,17 @@ function switchFilter(chart) {
   const api = charts[chart].opts.api
   const filterInstance = api.getFilterInstance("T");
   const button = document.getElementById(`filter${chart}`);
+  var filter = null
   if (filters.includes(chart)) {
+    // eslint-disable-next-line no-unused-vars
     filters = filters.filter(function(value, index, arr){
       return value != chart;
     });
-    var filter = null
     button.innerText = "Hide inactive";
   }
   else {
     filters.push(chart);
-    var filter = {
+    filter = {
       filterType: 'number',
       type: 'notEqual',
       filter: '0'
@@ -623,8 +625,9 @@ const charts = {
   },
 }
 
+// eslint-disable-next-line no-unused-vars
 function handleError(err) {
-  el = document.getElementById("error");
+  const el = document.getElementById("error");
   el.innerText = "Unable to find the requested page. Wrong guid? Wrong year?";
 }
 
@@ -652,7 +655,7 @@ function markNoPointColumns(nopoints) {
     return medalPainter_star2(params) || {color: 'red', 'background-color': '#ffebe0'}
   }
 
-  for (d of nopoints) {
+  for (let d of nopoints) {
     two_star_coldefs[5+(d-1)*2].cellStyle = nopointsColumn;
     two_star_coldefs[5+(d-1)*2 + 1].cellStyle = nopointsColumn;
     one_star_coldefs[5+(d-1)].cellStyle = nopointsColumn_one_star;
